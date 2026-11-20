@@ -5,7 +5,7 @@ import { DiscoverySectionHeader } from "@/components/home/discovery/DiscoverySec
 import { ROUTES } from "@/constants/routes";
 import { useTranslate } from "@/i18n/translate";
 import { fetchPublishedBlogs, type BlogCard } from "@/services/blogs.service";
-import { Play, X } from "lucide-react";
+import { ArrowRight, Play, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 function HomeVideoStrip({ blogs, title }: { blogs: BlogCard[]; title: string }) {
@@ -28,13 +28,13 @@ function HomeVideoStrip({ blogs, title }: { blogs: BlogCard[]; title: string }) 
       >
         {title}
       </h3>
-      <div className="mt-4 flex gap-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {blogs.map((blog) => (
           <button
             key={blog.id}
             type="button"
             onClick={() => setActive(blog)}
-            className="group relative aspect-video w-[78%] shrink-0 overflow-hidden rounded-2xl bg-[#1c2430] sm:w-[46%] lg:w-[calc((100%-3rem)/4)]"
+            className="group relative aspect-video w-[78%] shrink-0 snap-start overflow-hidden rounded-2xl bg-[#1c2430] sm:w-[46%] lg:w-[calc((100%-3rem)/4)]"
           >
             <img
               src={`https://i.ytimg.com/vi/${blog.youtubeVideoId}/hqdefault.jpg`}
@@ -74,7 +74,7 @@ function HomeVideoStrip({ blogs, title }: { blogs: BlogCard[]; title: string }) 
             </div>
             <div className="aspect-video">
               <iframe
-                src={`https://www.youtube-nocookie.com/embed/${active.youtubeVideoId}?autoplay=1`}
+                src={`https://www.youtube-nocookie.com/embed/${active.youtubeVideoId}?autoplay=1&controls=1&playsinline=1`}
                 title={active.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -121,20 +121,32 @@ export function HomeBlogSection() {
         titleId="home-blogs"
         actionLabel={t("home.trust.blogsAction")}
         actionHref={ROUTES.BLOGS}
+        actionTrailing={<ArrowRight className="size-4 shrink-0" aria-hidden="true" />}
+        className="flex-row items-center justify-between gap-3 md:items-baseline md:gap-4"
+        titleClassName="w-auto flex-1 md:w-full md:flex-initial"
+        actionClassName="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-right"
       />
       {blogs ? (
         <>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {articles.map((blog) => (
-              <BlogCardLink key={blog.id} blog={blog} />
+              <div
+                key={blog.id}
+                className="w-[78%] shrink-0 snap-start sm:w-[46%] lg:w-[calc((100%-3rem)/4)]"
+              >
+                <BlogCardLink blog={blog} />
+              </div>
             ))}
           </div>
           {videoBlogs.length > 0 ? <HomeVideoStrip blogs={videoBlogs} title={t("home.trust.videosTitle")} /> : null}
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="animate-pulse">
+            <div
+              key={index}
+              className="w-[78%] shrink-0 snap-start animate-pulse sm:w-[46%] lg:w-[calc((100%-3rem)/4)]"
+            >
               <div className="aspect-[16/9] rounded-2xl bg-primary-light" />
               <div className="mt-3 h-3 w-24 rounded bg-primary-light" />
               <div className="mt-2 h-4 w-full rounded bg-primary-light" />

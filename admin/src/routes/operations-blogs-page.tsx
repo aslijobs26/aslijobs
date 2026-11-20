@@ -2,6 +2,8 @@ import { OperationsLayout } from "../components/operations/layout/OperationsLayo
 import { OperationsFilterSelect } from "../components/operations/jobs/OperationsFilterSelect";
 import { env } from "../constants/env";
 import { OPERATIONS_ROUTES } from "../constants/operations-routes";
+import { OperationsFormField, operationsFieldInputClassName } from "../components/ui/OperationsFormField";
+import { OperationsDatePicker } from "../components/ui/OperationsDatePicker";
 import {
   deleteAdminBlog,
   fetchAdminBlogs,
@@ -25,13 +27,19 @@ import {
   Search,
   Star,
   Trash2,
+  X,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { Link } from "react-router-dom";
 
 function localDayBound(value: string, end: boolean) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day, end ? 23 : 0, end ? 59 : 0, end ? 59 : 0, end ? 999 : 0).toISOString();
+}
+
+function localDateKey(date = new Date()) {
+  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localTime.toISOString().slice(0, 10);
 }
 
 const TABS = [
@@ -136,25 +144,44 @@ export function OperationsBlogsPage() {
     setStatus(next);
   }
 
+  function openBlogMenu(event: MouseEvent<HTMLButtonElement>, blog: AdminBlog) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 176;
+    const menuHeight = 160;
+    const top =
+      window.innerHeight - rect.bottom >= menuHeight + 8
+        ? rect.bottom + 6
+        : Math.max(8, rect.top - menuHeight - 6);
+    const left = Math.min(
+      Math.max(8, window.innerWidth - menuWidth - 8),
+      Math.max(8, rect.right - menuWidth),
+    );
+
+    setMenu((current) =>
+      current?.blog.id === blog.id ? null : { blog, top, left },
+    );
+  }
+
   const rangeStart = total === 0 ? 0 : (page - 1) * 10 + 1;
   const rangeEnd = Math.min(page * 10, total);
+  const today = localDateKey();
 
   return (
     <OperationsLayout
       title="Blogs"
       subtitle="Publish career insights, hiring guides, and resources for the public site."
     >
-      <div className="flex flex-col gap-3">
-        <section aria-label="Blog totals" className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          <KpiCard label="Total blogs" value={stats.total} caption="All articles" icon={Newspaper} selected={status === ""} onClick={() => selectStatus("")} />
-          <KpiCard label="Published" value={stats.published} caption="Live on the site" icon={CheckCircle2} selected={status === "published"} onClick={() => selectStatus("published")} />
-          <KpiCard label="Drafts" value={stats.draft} caption="Not public" icon={FileText} selected={status === "draft"} onClick={() => selectStatus("draft")} />
-          <KpiCard label="Scheduled" value={stats.scheduled} caption="Waiting to publish" icon={CalendarClock} selected={status === "scheduled"} onClick={() => selectStatus("scheduled")} />
+      <div className="flex flex-col gap-4">
+        <section aria-label="Blog totals" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <KpiCard label="Total blogs" value={stats.total} caption="All articles" icon={Newspaper} tone="primary" selected={status === ""} onClick={() => selectStatus("")} />
+          <KpiCard label="Published" value={stats.published} caption="Live on the site" icon={CheckCircle2} tone="success" selected={status === "published"} onClick={() => selectStatus("published")} />
+          <KpiCard label="Drafts" value={stats.draft} caption="Not public" icon={FileText} tone="neutral" selected={status === "draft"} onClick={() => selectStatus("draft")} />
+          <KpiCard label="Scheduled" value={stats.scheduled} caption="Waiting to publish" icon={CalendarClock} tone="warning" selected={status === "scheduled"} onClick={() => selectStatus("scheduled")} />
         </section>
 
-        <section className="rounded-xl border border-border-subtle bg-surface shadow-sm">
-          <div className="flex flex-col gap-3 border-b border-border-subtle p-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex gap-1 overflow-x-auto" role="tablist" aria-label="Article status">
+        <section className="overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-border-subtle px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl bg-hero-bg/70 p-1" role="tablist" aria-label="Article status">
               {TABS.map((tab) => (
                 <button
                   key={tab.label}
@@ -162,8 +189,8 @@ export function OperationsBlogsPage() {
                   role="tab"
                   aria-selected={status === tab.value}
                   className={cn(
-                    "h-8 shrink-0 rounded-md px-3 text-xs font-semibold transition-colors",
-                    status === tab.value ? "bg-primary text-white" : "text-muted hover:bg-hero-bg hover:text-foreground",
+                    "h-9 shrink-0 rounded-lg px-3.5 text-xs font-semibold transition-colors",
+                    status === tab.value ? "bg-surface text-primary shadow-sm" : "text-muted hover:text-foreground",
                   )}
                   onClick={() => selectStatus(tab.value)}
                 >
@@ -177,28 +204,80 @@ export function OperationsBlogsPage() {
             </Link>
           </div>
           <form
-            className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_repeat(2,minmax(0,0.7fr))_auto]"
+            className="grid gap-3 px-4 py-4 sm:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_repeat(2,minmax(0,0.7fr))_auto] xl:items-end"
             onSubmit={(event) => {
               event.preventDefault();
               applySearch();
             }}
           >
-            <label className="relative block sm:col-span-2 xl:col-span-1">
-              <span className="sr-only">Search title</span>
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted" aria-hidden />
-              <input className={cn(fieldClass, "pl-8")} placeholder="Search title or slug" value={draftQ} onChange={(event) => setDraftQ(event.target.value)} />
-            </label>
-            <OperationsFilterSelect
-              label="Category"
-              value={category}
-              options={[{ value: "", label: "All categories" }, ...categories.map((item) => ({ value: item.id, label: item.name }))]}
-              onChange={(value) => {
-                setPage(1);
-                setCategory(value);
-              }}
-            />
-            <input className={fieldClass} type="date" aria-label="Updated from" max={to || undefined} value={from} onChange={(event) => { setPage(1); setFrom(event.target.value); }} />
-            <input className={fieldClass} type="date" aria-label="Updated to" min={from || undefined} value={to} onChange={(event) => { setPage(1); setTo(event.target.value); }} />
+            <OperationsFormField label="Search articles" htmlFor="blogs-search-title" className="sm:col-span-2 xl:col-span-1">
+              <span className="relative block">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted" aria-hidden />
+                <input id="blogs-search-title" className={cn(operationsFieldInputClassName, "pl-9")} placeholder="Title or slug" value={draftQ} onChange={(event) => setDraftQ(event.target.value)} />
+              </span>
+            </OperationsFormField>
+            <OperationsFormField label="Category" htmlFor="blogs-category-filter">
+              <OperationsFilterSelect
+                id="blogs-category-filter"
+                hideSrOnlyLabel
+                mobileSheet
+                triggerClassName="h-9 rounded-lg px-3 text-xs"
+                label="Category"
+                value={category}
+                options={[{ value: "", label: "All categories" }, ...categories.map((item) => ({ value: item.id, label: item.name }))]}
+                onChange={(value) => {
+                  setPage(1);
+                  setCategory(value);
+                }}
+              />
+            </OperationsFormField>
+            <OperationsFormField label="Updated from" htmlFor="blogs-updated-from">
+              <div className="flex min-w-0 items-center gap-1">
+                <OperationsDatePicker
+                  id="blogs-updated-from"
+                  value={from}
+                  placeholder="Select start date"
+                  maxDate={to || today}
+                  compact
+                  aria-label="Updated from"
+                  onChange={(value) => { setPage(1); setFrom(value); }}
+                />
+                {from ? (
+                  <button
+                    type="button"
+                    aria-label="Clear updated from date"
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    onClick={() => { setPage(1); setFrom(""); }}
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                ) : null}
+              </div>
+            </OperationsFormField>
+            <OperationsFormField label="Updated to" htmlFor="blogs-updated-to">
+              <div className="flex min-w-0 items-center gap-1">
+                <OperationsDatePicker
+                  id="blogs-updated-to"
+                  value={to}
+                  placeholder="Select end date"
+                  minDate={from || undefined}
+                  maxDate={today}
+                  compact
+                  aria-label="Updated to"
+                  onChange={(value) => { setPage(1); setTo(value); }}
+                />
+                {to ? (
+                  <button
+                    type="button"
+                    aria-label="Clear updated to date"
+                    className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                    onClick={() => { setPage(1); setTo(""); }}
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                ) : null}
+              </div>
+            </OperationsFormField>
             <button type="submit" className={secondaryButtonClass}>Search</button>
             {dateError ? <p className="text-xs text-danger sm:col-span-2 xl:col-span-full">{dateError}</p> : null}
           </form>
@@ -206,26 +285,49 @@ export function OperationsBlogsPage() {
 
         {error ? <p className="rounded-lg border border-danger/20 bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p> : null}
 
-        <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
-          <div className="overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <section className="overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+          <div className="grid gap-3 p-3 xl:hidden">
+            {loading
+              ? Array.from({ length: 3 }, (_, index) => (
+                  <div key={index} className="h-36 animate-pulse rounded-xl bg-hero-bg" />
+                ))
+              : null}
+            {!loading && items.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border-subtle px-4 py-10 text-center">
+                <p className="text-sm font-semibold text-foreground">No articles yet</p>
+                <p className="mt-1 text-xs text-muted">Create a blog or change the filters to see articles here.</p>
+              </div>
+            ) : null}
+            {!loading
+              ? items.map((blog) => (
+                  <BlogMobileCard
+                    key={blog.id}
+                    blog={blog}
+                    menuOpen={menu?.blog.id === blog.id}
+                    onOpenMenu={openBlogMenu}
+                  />
+                ))
+              : null}
+          </div>
+          <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden xl:block">
             <table className="min-w-[920px] w-full text-left text-sm">
-              <thead className="border-b border-border-subtle bg-hero-bg/70 text-[11px] font-semibold uppercase tracking-wide text-muted">
+              <thead className="border-b border-border-subtle bg-hero-bg/70 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
                 <tr>
-                  <th className="px-3 py-2.5 font-semibold">Article</th>
-                  <th className="px-3 py-2.5 font-semibold">Category</th>
-                  <th className="px-3 py-2.5 font-semibold">Author</th>
-                  <th className="px-3 py-2.5 font-semibold">Status</th>
-                  <th className="px-3 py-2.5 font-semibold">Featured</th>
-                  <th className="px-3 py-2.5 font-semibold">Published</th>
-                  <th className="px-3 py-2.5 font-semibold">Updated</th>
-                  <th className="px-3 py-2.5 text-right font-semibold">Actions</th>
+                  <th className="px-4 py-3 font-semibold">Article</th>
+                  <th className="px-4 py-3 font-semibold">Category</th>
+                  <th className="px-4 py-3 font-semibold">Author</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Featured</th>
+                  <th className="px-4 py-3 font-semibold">Published</th>
+                  <th className="px-4 py-3 font-semibold">Updated</th>
+                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading
                   ? Array.from({ length: 5 }, (_, index) => (
                       <tr key={index} className="border-t border-border-subtle">
-                        <td className="px-3 py-3" colSpan={8}>
+                        <td className="px-4 py-3.5" colSpan={8}>
                           <div className="h-10 animate-pulse rounded-lg bg-hero-bg" />
                         </td>
                       </tr>
@@ -233,7 +335,7 @@ export function OperationsBlogsPage() {
                   : null}
                 {!loading && items.length === 0 ? (
                   <tr>
-                    <td className="px-3 py-14 text-center" colSpan={8}>
+                    <td className="px-4 py-14 text-center" colSpan={8}>
                       <p className="text-sm font-semibold text-foreground">No articles yet</p>
                       <p className="mt-1 text-xs text-muted">Create a blog or change the filters to see articles here.</p>
                     </td>
@@ -241,26 +343,26 @@ export function OperationsBlogsPage() {
                 ) : null}
                 {!loading
                   ? items.map((blog) => (
-                      <tr key={blog.id} className="border-t border-border-subtle align-middle hover:bg-hero-bg/50">
-                        <td className="px-3 py-2.5">
+                      <tr key={blog.id} className="border-t border-border-subtle align-middle transition-colors hover:bg-hero-bg/50">
+                        <td className="px-4 py-3.5">
                           <Link to={`${OPERATIONS_ROUTES.BLOGS}/${blog.id}/edit`} className="flex min-w-0 items-center gap-3">
                             {blog.coverImage?.url ? (
-                              <img src={coverThumb(blog.coverImage.url)} alt="" className="h-10 w-16 shrink-0 rounded-md bg-hero-bg object-cover" />
+                              <img src={coverThumb(blog.coverImage.url)} alt="" className="h-12 w-20 shrink-0 rounded-lg bg-hero-bg object-cover" />
                             ) : (
-                              <span className="inline-flex h-10 w-16 shrink-0 items-center justify-center rounded-md bg-primary-light text-primary">
+                              <span className="inline-flex h-12 w-20 shrink-0 items-center justify-center rounded-lg bg-primary-light text-primary">
                                 <Newspaper className="size-4" aria-hidden />
                               </span>
                             )}
                             <span className="min-w-0">
-                              <span className="block truncate font-semibold text-foreground">{blog.title}</span>
-                              <span className="block truncate text-xs text-muted">{blog.slug}</span>
+                              <span className="block truncate text-sm font-semibold text-foreground">{blog.title}</span>
+                              <span className="mt-0.5 block truncate text-xs text-muted">{blog.slug}</span>
                             </span>
                           </Link>
                         </td>
-                        <td className="px-3 py-2.5 text-foreground">{blog.category?.name || "—"}</td>
-                        <td className="px-3 py-2.5 text-foreground">{blog.authorName || "—"}</td>
-                        <td className="px-3 py-2.5"><StatusBadge status={blog.status} /></td>
-                        <td className="px-3 py-2.5">
+                        <td className="px-4 py-3.5 text-sm text-foreground">{blog.category?.name || "—"}</td>
+                        <td className="px-4 py-3.5 text-sm text-foreground">{blog.authorName || "—"}</td>
+                        <td className="px-4 py-3.5"><StatusBadge status={blog.status} /></td>
+                        <td className="px-4 py-3.5">
                           {blog.isFeatured ? (
                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-foreground">
                               <Star className="size-3.5 fill-current text-warning" aria-hidden />
@@ -270,22 +372,15 @@ export function OperationsBlogsPage() {
                             <span className="text-xs text-muted">—</span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 tabular-nums text-muted">{formatDate(blog.publishedAt)}</td>
-                        <td className="px-3 py-2.5 tabular-nums text-muted">{formatDate(blog.updatedAt)}</td>
-                        <td className="px-3 py-2.5 text-right">
+                        <td className="px-4 py-3.5 text-xs tabular-nums text-muted">{formatDate(blog.publishedAt)}</td>
+                        <td className="px-4 py-3.5 text-xs tabular-nums text-muted">{formatDate(blog.updatedAt)}</td>
+                        <td className="px-4 py-3.5 text-right">
                           <button
                             type="button"
                             className={iconButtonClass}
                             aria-label={`Actions for ${blog.title}`}
                             aria-expanded={menu?.blog.id === blog.id}
-                            onClick={(event) => {
-                              const rect = event.currentTarget.getBoundingClientRect();
-                              setMenu((current) =>
-                                current?.blog.id === blog.id
-                                  ? null
-                                  : { blog, top: rect.bottom + 6, left: Math.max(8, rect.right - 188) },
-                              );
-                            }}
+                            onClick={(event) => openBlogMenu(event, blog)}
                           >
                             <MoreHorizontal className="size-4" aria-hidden />
                           </button>
@@ -296,14 +391,16 @@ export function OperationsBlogsPage() {
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-border-subtle px-3 py-2.5 text-sm">
+          <div className="flex flex-col gap-3 border-t border-border-subtle px-3 py-3 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-4">
             <p className="text-xs text-muted">
               {total === 0 ? "0 articles" : `${rangeStart}–${rangeEnd} of ${total}`}
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted">Page {page} of {totalPages}</span>
-              <button type="button" className={secondaryButtonClass} disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button>
-              <button type="button" className={secondaryButtonClass} disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button>
+            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start">
+              <span className="text-xs tabular-nums text-muted">Page {page} of {totalPages}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" className={secondaryButtonClass} disabled={page <= 1} onClick={() => setPage((current) => current - 1)}>Previous</button>
+                <button type="button" className={secondaryButtonClass} disabled={page >= totalPages} onClick={() => setPage((current) => current + 1)}>Next</button>
+              </div>
             </div>
           </div>
         </section>
@@ -397,17 +494,14 @@ export function OperationsBlogsPage() {
   );
 }
 
-const fieldClass =
-  "h-8 w-full rounded-md border border-border-subtle bg-surface px-2.5 text-[11px] font-medium text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none transition-[border-color,box-shadow] placeholder:text-muted hover:border-primary/25 focus:border-primary focus:ring-2 focus:ring-primary/30";
-
 const primaryButtonClass =
-  "inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-primary-hover";
+  "inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
 
 const secondaryButtonClass =
-  "inline-flex h-8 items-center justify-center rounded-md border border-border-subtle bg-surface px-3 text-xs font-semibold text-foreground shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:border-primary/25 disabled:cursor-not-allowed disabled:opacity-40";
+  "inline-flex h-9 items-center justify-center rounded-lg border border-border-subtle bg-surface px-3.5 text-xs font-semibold text-foreground shadow-sm transition-[border-color,background-color,box-shadow] hover:border-primary/25 hover:bg-hero-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-40";
 
 const iconButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md text-muted transition-colors hover:bg-hero-bg hover:text-foreground";
+  "inline-flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-hero-bg hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30";
 
 const menuItemClass =
   "flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-foreground hover:bg-hero-bg";
@@ -419,6 +513,86 @@ function coverThumb(url: string): string {
   return `${url.slice(0, index + marker.length)}c_fill,g_auto,w_320,h_200,f_auto,q_auto/${url.slice(index + marker.length)}`;
 }
 
+function BlogMobileCard({
+  blog,
+  menuOpen,
+  onOpenMenu,
+}: {
+  blog: AdminBlog;
+  menuOpen: boolean;
+  onOpenMenu: (event: MouseEvent<HTMLButtonElement>, blog: AdminBlog) => void;
+}) {
+  return (
+    <article className="group overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm transition-[border-color,box-shadow] hover:border-primary/20 hover:shadow-md">
+      <div className="flex min-w-0 items-start gap-3.5 p-4">
+        {blog.coverImage?.url ? (
+          <img
+            src={coverThumb(blog.coverImage.url)}
+            alt=""
+            className="h-16 w-20 shrink-0 rounded-xl bg-hero-bg object-cover ring-1 ring-border-subtle sm:h-[4.5rem] sm:w-[5.5rem]"
+          />
+        ) : (
+          <span className="inline-flex h-16 w-20 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary ring-1 ring-border-subtle sm:h-[4.5rem] sm:w-[5.5rem]">
+            <Newspaper className="size-5" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start gap-1.5">
+            <Link
+              to={`${OPERATIONS_ROUTES.BLOGS}/${blog.id}/edit`}
+              className="min-w-0 flex-1"
+            >
+              <span className="line-clamp-2 text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
+                {blog.title}
+              </span>
+              <span className="mt-1.5 block truncate text-[11px] text-muted">
+                {blog.slug}
+              </span>
+            </Link>
+            <button
+              type="button"
+              className={cn(iconButtonClass, "size-9 shrink-0 border border-transparent hover:border-border-subtle")}
+              aria-label={`Actions for ${blog.title}`}
+              aria-expanded={menuOpen}
+              onClick={(event) => onOpenMenu(event, blog)}
+            >
+              <MoreHorizontal className="size-4" aria-hidden />
+            </button>
+          </div>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <StatusBadge status={blog.status} />
+            {blog.isFeatured ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2.5 py-1 text-[10px] font-semibold text-foreground">
+                <Star className="size-3 fill-current text-warning" aria-hidden />
+                Featured
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-px border-t border-border-subtle bg-border-subtle">
+        <BlogMobileMeta label="Category" value={blog.category?.name || "—"} />
+        <BlogMobileMeta label="Author" value={blog.authorName || "—"} />
+        <BlogMobileMeta label="Published" value={formatDate(blog.publishedAt)} />
+        <BlogMobileMeta label="Updated" value={formatDate(blog.updatedAt)} />
+      </div>
+    </article>
+  );
+}
+
+function BlogMobileMeta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 bg-surface px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-[13px] font-medium leading-snug text-foreground">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function formatDate(value: string | null | undefined): string {
   if (!value) return "—";
   const date = new Date(value);
@@ -426,11 +600,35 @@ function formatDate(value: string | null | undefined): string {
   return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(date);
 }
 
+const KPI_TONES = {
+  primary: {
+    icon: "bg-primary-light text-primary",
+    card: "border-primary/20 bg-gradient-to-br from-primary/10 to-white dark:from-primary/15 dark:to-surface",
+    selected: "border-primary/40 ring-2 ring-primary/25 shadow-md",
+  },
+  success: {
+    icon: "bg-success/10 text-success",
+    card: "border-success/20 bg-gradient-to-br from-success/10 to-white dark:from-success/15 dark:to-surface",
+    selected: "border-success/35 ring-2 ring-success/20 shadow-md",
+  },
+  neutral: {
+    icon: "bg-hero-bg text-muted",
+    card: "border-border-subtle bg-gradient-to-br from-hero-bg to-white dark:from-surface dark:to-surface",
+    selected: "border-muted/35 ring-2 ring-muted/15 shadow-md",
+  },
+  warning: {
+    icon: "bg-warning/10 text-warning",
+    card: "border-warning/25 bg-gradient-to-br from-warning/10 to-white dark:from-warning/15 dark:to-surface",
+    selected: "border-warning/35 ring-2 ring-warning/20 shadow-md",
+  },
+} as const;
+
 function KpiCard({
   label,
   value,
   caption,
   icon: Icon,
+  tone,
   selected,
   onClick,
 }: {
@@ -438,6 +636,7 @@ function KpiCard({
   value: number;
   caption: string;
   icon: typeof Newspaper;
+  tone: keyof typeof KPI_TONES;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -447,16 +646,17 @@ function KpiCard({
       aria-pressed={selected}
       onClick={onClick}
       className={cn(
-        "flex min-w-0 items-start justify-between gap-2 rounded-xl border border-border-subtle bg-surface p-3.5 text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
-        selected && "ring-2 ring-primary/40",
+        "flex min-h-28 min-w-0 items-start justify-between gap-3 rounded-2xl border p-4 text-left shadow-sm transition-[transform,border-color,background-color,box-shadow] hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        KPI_TONES[tone].card,
+        selected && KPI_TONES[tone].selected,
       )}
     >
       <span className="min-w-0">
-        <span className="block text-[11px] font-medium text-muted">{label}</span>
-        <span className="mt-1.5 block text-2xl font-bold leading-none tracking-tight tabular-nums text-foreground">{value.toLocaleString("en-IN")}</span>
-        <span className="mt-2 block truncate text-[11px] font-medium text-muted">{caption}</span>
+        <span className="block text-xs font-semibold text-muted">{label}</span>
+        <span className="mt-2 block text-[1.75rem] font-bold leading-none tracking-tight tabular-nums text-foreground">{value.toLocaleString("en-IN")}</span>
+        <span className="mt-2.5 block truncate text-xs text-muted">{caption}</span>
       </span>
-      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-hero-bg text-primary">
+      <span className={cn("inline-flex size-10 shrink-0 items-center justify-center rounded-xl", KPI_TONES[tone].icon)}>
         <Icon className="size-4" aria-hidden />
       </span>
     </button>
@@ -470,7 +670,7 @@ function StatusBadge({ status }: { status: string }) {
       : status === "scheduled"
         ? "bg-warning/15 text-warning"
         : "bg-hero-bg text-muted";
-  return <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize", styles)}>{status}</span>;
+  return <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize", styles)}>{status}</span>;
 }
 
 function MenuLink({ to, icon: Icon, label, onClick }: { to: string; icon: typeof Pencil; label: string; onClick: () => void }) {

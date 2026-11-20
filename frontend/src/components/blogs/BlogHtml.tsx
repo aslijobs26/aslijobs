@@ -28,7 +28,7 @@ export function BlogHtml({ html }: { html: string }) {
   return (
     <div
       ref={ref}
-      className={`${styles["blog-body"]} mt-7`}
+      className={`${styles["blog-body"]} mt-6 sm:mt-7`}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

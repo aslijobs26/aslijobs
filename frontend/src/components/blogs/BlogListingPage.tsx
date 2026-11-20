@@ -245,7 +245,7 @@ export function BlogListingPage() {
                 aria-label="Previous articles"
                 disabled={latestPool.length < 2}
                 onClick={() => setLatestIndex((index) => (index - 1 + latestPool.length) % latestPool.length)}
-                className="inline-flex size-8 items-center justify-center rounded-full border border-[#d5dee6] text-[#3d4750] disabled:opacity-40"
+                className="inline-flex size-10 items-center justify-center rounded-full border border-border-subtle bg-surface text-foreground shadow-sm transition-[scale,border-color,background-color,color,box-shadow] hover:border-primary/40 hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary active:bg-primary-light active:text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
               </button>
@@ -254,7 +254,7 @@ export function BlogListingPage() {
                 aria-label="Next articles"
                 disabled={latestPool.length < 2}
                 onClick={() => setLatestIndex((index) => (index + 1) % latestPool.length)}
-                className="inline-flex size-8 items-center justify-center rounded-full bg-[#1c2430] text-white disabled:opacity-40"
+                className="inline-flex size-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition-[scale,border-color,background-color,box-shadow] hover:border-primary-hover hover:bg-primary-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary-hover active:bg-primary-hover disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronRight className="size-4" aria-hidden="true" />
               </button>

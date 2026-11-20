@@ -27,15 +27,15 @@ export function BlogArticleView({
   const initial = (article.authorName.trim().charAt(0) || "A").toUpperCase();
 
   return (
-    <Container className="py-8 sm:py-10">
-      <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
+    <Container className="py-6 sm:py-8 lg:py-10">
+      <div className="grid items-start gap-7 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <article className="min-w-0">
           {showBack ? (
             <Suspense fallback={null}>
               <ArticleBackLink />
             </Suspense>
           ) : null}
-          <nav className="text-[13px] text-muted">
+          <nav className="text-xs text-muted sm:text-[13px]">
             <Link href={ROUTES.BLOGS} className="hover:text-primary">
               Career Insights
             </Link>
@@ -52,20 +52,20 @@ export function BlogArticleView({
           </nav>
 
           <header className="mt-4">
-            <h1 className="max-w-[46rem] text-[1.85rem] font-bold leading-[1.15] tracking-[-0.03em] text-foreground sm:text-[2.35rem]">
+            <h1 className="max-w-[46rem] text-[1.75rem] font-bold leading-[1.18] tracking-[-0.03em] text-foreground sm:text-[2rem] lg:text-[2.35rem]">
               {article.title}
             </h1>
             {article.excerpt ? (
-              <p className="mt-3 max-w-[46rem] text-[15px] leading-relaxed text-muted sm:text-base">{article.excerpt}</p>
+              <p className="mt-3 max-w-[46rem] text-sm leading-relaxed text-muted sm:text-[15px] lg:text-base">{article.excerpt}</p>
             ) : null}
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-white px-3 py-1.5 text-[13px] text-muted">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-white px-2.5 py-1.5 text-xs text-muted sm:px-3 sm:text-[13px]">
                   <Clock3 className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                   {formatReadingTime(article.readingTimeMinutes)}
                 </span>
                 {published ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-white px-3 py-1.5 text-[13px] text-muted">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-white px-2.5 py-1.5 text-xs text-muted sm:px-3 sm:text-[13px]">
                     <Calendar className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
                     <time dateTime={article.publishedAt ?? undefined}>{published}</time>
                   </span>
@@ -79,7 +79,7 @@ export function BlogArticleView({
             <img
               src={article.coverImageUrl}
               alt={article.coverImageAlt || article.title}
-              className="mt-5 aspect-[16/9] w-full rounded-2xl object-cover"
+              className="mt-4 aspect-[16/9] w-full rounded-xl object-cover sm:mt-5 sm:rounded-2xl"
             />
           ) : null}
 
@@ -87,8 +87,8 @@ export function BlogArticleView({
             <BlogHtml html={article.content} />
             <ArticleFaqs faqs={article.faqs ?? []} />
 
-            <div className="mt-10 rounded-xl border border-primary/15 bg-gradient-to-r from-primary-light to-white px-4 py-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">Written by</p>
+            <div className="mt-8 rounded-xl border border-primary/15 bg-gradient-to-r from-primary-light to-white px-3.5 py-3 sm:mt-10 sm:px-4 sm:py-3.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">Written by</p>
               <div className="mt-2.5 flex items-center gap-3">
                 {article.authorImageUrl ? (
                   <img src={article.authorImageUrl} alt="" className="size-10 rounded-full object-cover" />
@@ -165,9 +165,9 @@ export function BlogArticleView({
       </div>
 
       {related.length > 0 ? (
-        <section className="mt-14">
-          <h2 className="text-lg font-bold text-foreground">Recent articles</h2>
-          <div className="mt-4 grid items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <section className="mt-10 sm:mt-14">
+          <h2 className="text-base font-bold text-foreground sm:text-lg">Recent articles</h2>
+          <div className="mt-4 grid items-stretch gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
             {related.map((blog) => (
               <Link
                 key={blog.id}
@@ -187,11 +187,11 @@ export function BlogArticleView({
                   {blog.category ? (
                     <span className="text-xs font-semibold text-primary">{blog.category.name}</span>
                   ) : null}
-                  <span className="mt-1.5 line-clamp-2 text-[15px] font-bold leading-snug text-foreground group-hover:text-primary">
+                  <span className="mt-1.5 line-clamp-2 text-sm font-bold leading-snug text-foreground group-hover:text-primary sm:text-[15px]">
                     {blog.title}
                   </span>
                   {blog.excerpt ? (
-                    <span className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted">{blog.excerpt}</span>
+                    <span className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-muted sm:text-sm">{blog.excerpt}</span>
                   ) : null}
                   <span className="mt-auto flex items-center gap-1.5 pt-3 text-xs text-muted">
                     <Clock3 className="size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
@@ -218,25 +218,25 @@ export function BlogArticleView({
 function ArticleFaqs({ faqs }: { faqs: { question: string; answer: string }[] }) {
   if (faqs.length === 0) return null;
   return (
-    <section className="mt-12 border-t border-border-subtle pt-8" aria-labelledby="article-faq-heading">
-      <h2 id="article-faq-heading" className="text-xl font-bold tracking-[-0.02em] text-foreground">
+    <section className="mt-10 border-t border-border-subtle pt-6 sm:mt-12 sm:pt-8" aria-labelledby="article-faq-heading">
+      <h2 id="article-faq-heading" className="text-lg font-bold tracking-[-0.02em] text-foreground sm:text-xl">
         Frequently Asked Questions
       </h2>
       <div className="mt-1">
         {faqs.map((item, index) => (
           <details key={item.question} className="group border-b border-border-subtle">
-            <summary className="flex cursor-pointer list-none items-center gap-4 py-4 marker:content-none [&::-webkit-details-marker]:hidden">
-              <span className="w-7 shrink-0 text-sm font-bold tabular-nums text-primary">
+            <summary className="flex cursor-pointer list-none items-center gap-3 py-3 marker:content-none [&::-webkit-details-marker]:hidden sm:gap-4 sm:py-4">
+              <span className="w-7 shrink-0 text-xs font-bold tabular-nums text-primary sm:text-sm">
                 {String(index + 1).padStart(2, "0")}
               </span>
-              <span className="min-w-0 flex-1 text-[15px] font-semibold leading-snug text-foreground group-open:text-primary">
+              <span className="min-w-0 flex-1 text-sm font-semibold leading-snug text-foreground group-open:text-primary sm:text-[15px]">
                 {item.question.replace(/^\s*\d+\.\s*/, "")}
               </span>
               <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full border border-border-subtle text-muted transition-colors group-open:border-primary group-open:bg-primary group-open:text-white">
                 <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden="true" />
               </span>
             </summary>
-            <p className="max-w-[40rem] pb-4 pl-11 pr-11 text-sm leading-7 text-muted">{item.answer}</p>
+            <p className="max-w-[40rem] pb-3 pl-10 pr-10 text-[13px] leading-6 text-muted sm:pb-4 sm:pl-11 sm:pr-11 sm:text-sm sm:leading-7">{item.answer}</p>
           </details>
         ))}
       </div>

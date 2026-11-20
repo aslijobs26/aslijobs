@@ -7,6 +7,8 @@ type DiscoverySectionHeaderProps = {
   titleId: string;
   actionLabel?: string;
   actionHref?: string;
+  actionTrailing?: ReactNode;
+  actionClassName?: string;
   className?: string;
   titleClassName?: string;
 };
@@ -16,6 +18,8 @@ export function DiscoverySectionHeader({
   titleId,
   actionLabel,
   actionHref,
+  actionTrailing,
+  actionClassName,
   className,
   titleClassName,
 }: DiscoverySectionHeaderProps) {
@@ -38,9 +42,13 @@ export function DiscoverySectionHeader({
       {actionLabel && actionHref ? (
         <Link
           href={actionHref}
-          className="discovery-section-action max-w-full text-sm font-semibold leading-snug text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:shrink-0"
+          className={cn(
+            "discovery-section-action max-w-full text-sm font-semibold leading-snug text-primary transition-colors hover:text-primary-hover focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 md:shrink-0",
+            actionClassName,
+          )}
         >
           {actionLabel}
+          {actionTrailing}
         </Link>
       ) : null}
     </div>

@@ -253,7 +253,7 @@ export function FloatingBottomNav() {
             className="pointer-events-none absolute inset-0 bg-job-card-selected-surface"
           />
           <div
-            className="relative z-10 flex h-[78px] w-full items-stretch px-1"
+            className="relative z-10 flex min-h-[78px] w-full items-stretch px-0.5"
             role="presentation"
           >
             {navItems.map((item) => {
@@ -278,7 +278,7 @@ export function FloatingBottomNav() {
                   }
                   className={cn(
                     "relative flex min-w-0 flex-1 basis-0 flex-col items-center justify-center",
-                    "pt-2.5 pb-1.5",
+                    "px-0.5 pt-2 pb-1.5",
                     "transition-colors duration-[220ms] ease-out",
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30",
                     active ? "text-primary" : "text-muted",
@@ -329,7 +329,7 @@ export function FloatingBottomNav() {
 
                   <span
                     className={cn(
-                      "mt-1 max-w-full truncate text-xs leading-none",
+                      "mt-0.5 w-full text-center text-[11px] leading-normal break-words",
                       "transition-colors duration-[220ms] ease-out",
                       active
                         ? "font-semibold text-primary"

@@ -222,7 +222,7 @@ const en = {
       resourcesAction: "View all resources →",
       blogsTitle: "Latest blogs & articles",
       videosTitle: "Latest videos",
-      blogsAction: "View all blogs →",
+      blogsAction: "View all blogs",
       blogsEmpty: "New articles will appear here.",
       resources: {
         guide: {
@@ -476,7 +476,7 @@ const hi: HomeCatalog = {
       resourcesAction: "सभी संसाधन देखें →",
       blogsTitle: "नवीनतम ब्लॉग और लेख",
       videosTitle: "नवीनतम वीडियो",
-      blogsAction: "सभी लेख देखें →",
+      blogsAction: "सभी लेख देखें",
       blogsEmpty: "नए लेख यहाँ दिखेंगे।",
       resources: {
         guide: {
@@ -730,7 +730,7 @@ const te: HomeCatalog = {
       resourcesAction: "అన్ని వనరులు చూడండి →",
       blogsTitle: "తాజా బ్లాగులు & వ్యాసాలు",
       videosTitle: "తాజా వీడియోలు",
-      blogsAction: "అన్ని వ్యాసాలు చూడండి →",
+      blogsAction: "అన్ని వ్యాసాలు చూడండి",
       blogsEmpty: "కొత్త వ్యాసాలు ఇక్కడ కనిపిస్తాయి.",
       resources: {
         guide: {
@@ -991,7 +991,7 @@ const ta: HomeCatalog = {
       resourcesAction: "அனைத்து வளங்களையும் பாருங்கள் →",
       blogsTitle: "சமீபத்திய வலைப்பதிவுகள் & கட்டுரைகள்",
       videosTitle: "சமீபத்திய வீடியோக்கள்",
-      blogsAction: "அனைத்து கட்டுரைகளும் →",
+      blogsAction: "அனைத்து கட்டுரைகளும்",
       blogsEmpty: "புதிய கட்டுரைகள் இங்கே தோன்றும்.",
       resources: {
         guide: {
@@ -1246,7 +1246,7 @@ const kn: HomeCatalog = {
       resourcesAction: "ಎಲ್ಲಾ ಸಂಪನ್ಮೂಲಗಳನ್ನು ನೋಡಿ →",
       blogsTitle: "ಇತ್ತೀಚಿನ ಬ್ಲಾಗ್‌ಗಳು ಮತ್ತು ಲೇಖನಗಳು",
       videosTitle: "ಇತ್ತೀಚಿನ ವೀಡಿಯೊಗಳು",
-      blogsAction: "ಎಲ್ಲಾ ಲೇಖನಗಳನ್ನು ನೋಡಿ →",
+      blogsAction: "ಎಲ್ಲಾ ಲೇಖನಗಳನ್ನು ನೋಡಿ",
       blogsEmpty: "ಹೊಸ ಲೇಖನಗಳು ಇಲ್ಲಿ ಕಾಣಿಸುತ್ತವೆ.",
       resources: {
         guide: {
@@ -1503,7 +1503,7 @@ const ml: HomeCatalog = {
       resourcesAction: "എല്ലാ ഉറവിടങ്ങളും കാണൂ →",
       blogsTitle: "ഏറ്റവും പുതിയ ബ്ലോഗുകളും ലേഖനങ്ങളും",
       videosTitle: "ഏറ്റവും പുതിയ വീഡിയോകൾ",
-      blogsAction: "എല്ലാ ലേഖനങ്ങളും കാണൂ →",
+      blogsAction: "എല്ലാ ലേഖനങ്ങളും കാണൂ",
       blogsEmpty: "പുതിയ ലേഖനങ്ങൾ ഇവിടെ കാണാം.",
       resources: {
         guide: {
