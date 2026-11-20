@@ -1396,6 +1396,18 @@ async function processInboundTurn(input: {
       logWhatsAppBot("OPENAI_REPLY_NOT_SENT", "reason=model_unavailable_no_scripted_fallback");
       return;
     }
+    if (turn.facts.situation === "job_count" && typeof turn.facts.jobSearchUrl === "string") {
+      const jobsUrl = turn.facts.jobSearchUrl.trim();
+      if (jobsUrl && !replyText.includes(jobsUrl)) {
+        const linkLabel =
+          merged.language === "te" ? "ఉద్యోగాలు చూడండి" :
+          merged.language === "hi" ? "नौकरियां देखें" :
+          merged.language === "ta" ? "வேலைகளைப் பார்க்கவும்" :
+          merged.language === "kn" ? "ಉದ್ಯೋಗಗಳನ್ನು ನೋಡಿ" :
+          merged.language === "ml" ? "ജോലികൾ കാണുക" : "View jobs";
+        replyText = `${replyText}\n\n${linkLabel}: ${jobsUrl}`;
+      }
+    }
     const plan = whatsappAiCallPlan({
       protocol: false,
       voice: input.messageType === "audio",
@@ -2063,6 +2075,7 @@ async function runAuthorizedJobSearch(
     return say("", primary.jobs, meta, publicJobReplyFacts(meta, {
       situation: replySituation,
       location: understanding.location,
+      locationKind: understanding.locationKind,
       role: understanding.category,
       appliedFilters,
       empty: false,
@@ -2129,6 +2142,7 @@ async function runAuthorizedJobSearch(
   return say("", wider.jobs, meta, publicJobReplyFacts(meta, {
     situation: replySituation,
     location: understanding.location,
+    locationKind: understanding.locationKind,
     role: understanding.category,
     appliedFilters,
     empty: wider.total === 0,
@@ -2148,8 +2162,25 @@ function publicJobReplyFacts(
   facts: Record<string, unknown>,
   language?: string,
 ): Record<string, unknown> {
+  let jobSearchUrl = "";
+  if (facts.situation === "job_count") {
+    const params = new URLSearchParams();
+    const location = String(facts.location ?? "").trim();
+    const role = String(facts.role ?? "").trim();
+    if (location) {
+      params.set(facts.locationKind === "state" ? "state" : "city", location);
+    }
+    if (role) params.set("q", role);
+    const query = params.toString();
+    jobSearchUrl = getLocalizedWebsiteUrl(
+      `/jobs${query ? `?${query}` : ""}`,
+      language,
+      env.FRONTEND_URL,
+    );
+  }
   return {
     ...facts,
+    ...(jobSearchUrl ? { jobSearchUrl } : {}),
     accountType: meta.accountType,
     ...(meta.accountType === "none" ? { registration: siteUrls(language) } : {}),
   };
