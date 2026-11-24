@@ -100,13 +100,13 @@ export function OperationsSubscriptionsPage() {
           </header>
           <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
             <table className="w-full min-w-[1080px] text-left text-sm">
-              <thead className="bg-hero-bg text-xs uppercase tracking-wide text-muted"><tr><th className="px-4 py-3">Employer</th><th className="px-4 py-3">Plan</th><th className="px-4 py-3">Price (before GST)</th><th className="px-4 py-3">Posts</th><th className="px-4 py-3">Validity</th><th className="px-4 py-3">Cities</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead>
+              <thead className="bg-hero-bg text-xs uppercase tracking-wide text-muted"><tr><th className="px-4 py-3">Employer</th><th className="px-4 py-3">Plan</th><th className="px-4 py-3">Price (before GST)</th><th className="px-4 py-3">Posts</th><th className="px-4 py-3">Post validity</th><th className="px-4 py-3">Cities</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead>
               <tbody className="divide-y divide-border-subtle">
                 {filteredGrants.map((grant) => <tr key={grant.id}>
                   <td className="px-4 py-3"><p className="font-semibold text-foreground">{grant.companyName || grant.employerName}</p><p className="text-xs text-muted">{grant.email || grant.employerName}</p></td>
                   <td className="px-4 py-3"><p className="font-medium text-foreground">{grant.planName}</p><p className="text-xs text-muted">{grant.source.replaceAll("_", " ")}</p></td>
                   <td className="px-4 py-3 font-medium tabular-nums">{grant.priceInr > 0 ? inr(grant.priceInr) : grant.source === "auto_free" ? "Free" : "Complimentary"}</td>
-                  <td className="px-4 py-3 tabular-nums">{grant.jobCreditsUsed} used / {grant.jobCredits}</td><td className="px-4 py-3">{grant.listingValidityDays} days</td><td className="px-4 py-3">{grant.maxCities}</td>
+                  <td className="px-4 py-3 tabular-nums">{grant.jobCreditsUsed} used / {grant.jobCredits}</td><td className="px-4 py-3">{grant.listingValidityDays} days per post</td><td className="px-4 py-3">{grant.maxCities}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-hero-bg px-2 py-1 text-xs capitalize">{grant.status}</span></td>
                   <td className="px-4 py-3">{canEdit && grant.status === "active" ? <button className={secondaryButtonClass} onClick={() => { setNotice(""); setEditingGrant({ ...grant }); }}>Edit</button> : <span className="text-xs text-muted">—</span>}</td>
                 </tr>)}
