@@ -25,6 +25,9 @@ export type PaymentInvoiceData = {
   planHighlights: string[];
   sacCode: string;
   baseAmount: number;
+  planPrice?: number;
+  discountAmount?: number;
+  discountPercent?: number;
   gstRatePercent: number;
   gstAmount: number;
   /** Total charged (base + GST). */
@@ -423,8 +426,9 @@ export function buildPaymentInvoicePdf(data: PaymentInvoiceData): Promise<Buffer
   cellText(0, "1");
   cellText(2, data.sacCode || "—");
   cellText(3, "1");
-  cellText(4, money(data.baseAmount, data.currency));
-  cellText(5, money(data.baseAmount, data.currency), true);
+  const linePrice = data.planPrice ?? data.baseAmount;
+  cellText(4, money(linePrice, data.currency));
+  cellText(5, money(linePrice, data.currency), true);
 
   doc.moveTo(left, rowBottom).lineTo(right, rowBottom).lineWidth(0.8).strokeColor(C.line).stroke();
   y = rowBottom + 20;
@@ -435,7 +439,10 @@ export function buildPaymentInvoicePdf(data: PaymentInvoiceData): Promise<Buffer
   const totalsX = right - totalsW;
 
   const totalsRows: Array<[string, string]> = [
-    ["Subtotal", money(data.baseAmount, data.currency)],
+    ["Subtotal", money(linePrice, data.currency)],
+    ...(data.discountAmount && data.discountAmount > 0
+      ? [[`Discount${data.discountPercent ? ` (${data.discountPercent}%)` : ""}`, `-${money(data.discountAmount, data.currency)}`] as [string, string]]
+      : []),
     ...taxLines.map((t): [string, string] => [t.label, money(t.amount, data.currency)]),
   ];
   const totalsInnerH = totalsRows.length * 20 + 12;
@@ -518,7 +525,7 @@ export function buildPaymentInvoicePdf(data: PaymentInvoiceData): Promise<Buffer
       .fontSize(8)
       .fillColor(C.muted)
       .text(
-        `Includes ${money(data.gstAmount, data.currency)} GST @ ${data.gstRatePercent}% on the plan price.${
+        `Includes ${money(data.gstAmount, data.currency)} GST @ ${data.gstRatePercent}% on the ${data.discountAmount ? "discounted " : ""}plan price.${
           isTaxInvoice ? " Tax payable on reverse charge: No." : ""
         }`,
         left,

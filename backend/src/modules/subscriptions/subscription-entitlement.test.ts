@@ -32,11 +32,11 @@ describe("plan catalog", () => {
     );
     assert.deepEqual(
       [SUBSCRIPTION_PLANS.starter_299.priceInr, SUBSCRIPTION_PLANS.starter_299.jobCredits, SUBSCRIPTION_PLANS.starter_299.listingValidityDays, SUBSCRIPTION_PLANS.starter_299.maxCities],
-      [299, 1, 7, 1],
+      [299, 1, 15, 2],
     );
     assert.deepEqual(
       [SUBSCRIPTION_PLANS.growth_999.priceInr, SUBSCRIPTION_PLANS.growth_999.jobCredits, SUBSCRIPTION_PLANS.growth_999.listingValidityDays, SUBSCRIPTION_PLANS.growth_999.maxCities],
-      [999, 5, 15, 2],
+      [999, 5, 30, 5],
     );
     assert.equal(SUBSCRIPTION_PLANS.enterprise.contactSales, true);
   });

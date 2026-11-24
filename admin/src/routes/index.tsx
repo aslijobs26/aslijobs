@@ -42,6 +42,7 @@ import { OperationsBlogEditorRoute } from "./operations-blog-editor-page";
 import { OperationsBlogPreviewPage } from "./operations-blog-preview-page";
 import { OperationsBlogCategoriesPage } from "./operations-blog-categories-page";
 import { OperationsBlogTagsPage } from "./operations-blog-tags-page";
+import { OperationsSubscriptionsPage } from "./operations-subscriptions-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
@@ -235,14 +236,8 @@ export function AppRoutes() {
           }
         />
         <Route
-          path={OPERATIONS_ROUTES.SUBSCRIPTIONS}
-          element={<OperationsPlaceholderPage title="Subscriptions & Boosters" />}
-        />
-        <Route
           path={OPERATIONS_ROUTES.PAYMENTS}
-          element={
-            <OperationsPlaceholderPage title="Payments & Subscriptions" />
-          }
+          element={<OperationsSubscriptionsPage />}
         />
         <Route
           path={OPERATIONS_ROUTES.TRANSACTIONS}

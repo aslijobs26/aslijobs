@@ -8,7 +8,7 @@ import {
   SUBSCRIPTION_PLANS,
   computeGst,
   isPurchasablePlanCode,
-  type PurchasablePlanCode,
+  type SubscriptionPlanCode,
 } from "../subscriptions/subscription.constants.js";
 import { subscriptionService } from "../subscriptions/subscription.service.js";
 import {
@@ -27,6 +27,7 @@ import {
 } from "./payment-order.model.js";
 import { PaymentWebhookEventModel } from "./payment-webhook-event.model.js";
 import { buildPaymentInvoicePdf } from "./payment-invoice-pdf.js";
+import { resolveSubscriptionPlans } from "../subscriptions/subscription-plan.service.js";
 
 const MS_PER_MINUTE = 60_000;
 /** Reuse an open checkout session instead of creating duplicate orders. */
@@ -142,11 +143,11 @@ export function orderTaxBreakdown(order: {
 }
 
 function toPublicOrder(order: PaymentOrderLean) {
-  const plan = SUBSCRIPTION_PLANS[order.planCode as PurchasablePlanCode];
+  const plan = SUBSCRIPTION_PLANS[order.planCode as SubscriptionPlanCode];
   return {
     orderId: order.orderId,
     planCode: order.planCode,
-    planName: plan?.name ?? order.planCode,
+    planName: order.planName || plan?.name || order.planCode,
     amount: order.amount,
     ...orderTaxBreakdown(order),
     currency: order.currency,
@@ -178,6 +179,11 @@ export const paymentService = {
     employerId: string;
     teamMemberId?: string | null;
     planCode: string;
+    customPlan?: { name?: string; priceInr: number; jobCredits: number; listingValidityDays: number; maxCities: number };
+    discountPercent?: number;
+    returnUrl?: string;
+    allowReuse?: boolean;
+    expiresInMinutes?: number;
   }) {
     if (!env.PAYMENTS_ENABLED) {
       throw new AppError(
@@ -185,14 +191,33 @@ export const paymentService = {
         HTTP_STATUS.SERVICE_UNAVAILABLE,
       );
     }
-    if (!isPurchasablePlanCode(input.planCode)) {
+    const isCustomPlan = Boolean(input.customPlan);
+    if ((isCustomPlan && input.planCode !== "enterprise") || (!isCustomPlan && !isPurchasablePlanCode(input.planCode))) {
       throw new AppError("This plan cannot be purchased online.", HTTP_STATUS.BAD_REQUEST);
     }
-    const plan = SUBSCRIPTION_PLANS[input.planCode];
-    if (!plan.priceInr || plan.priceInr <= 0) {
+    const catalogPlans = await resolveSubscriptionPlans();
+    const catalogPlan = catalogPlans[input.planCode as SubscriptionPlanCode];
+    const plan = input.customPlan ? {
+      ...catalogPlan,
+      name: input.customPlan.name?.trim() || catalogPlan.name,
+      packageLabel: input.customPlan.name?.trim() || catalogPlan.name,
+      priceInr: input.customPlan.priceInr,
+      jobCredits: input.customPlan.jobCredits,
+      listingValidityDays: input.customPlan.listingValidityDays,
+      maxCities: input.customPlan.maxCities,
+      purchasable: true,
+    } : catalogPlan;
+    if (!plan || (!isCustomPlan && !plan.purchasable) || !plan.priceInr || plan.priceInr <= 0) {
       throw new AppError("This plan cannot be purchased online.", HTTP_STATUS.BAD_REQUEST);
     }
-    const tax = computeGst(plan.priceInr);
+    if (input.customPlan && (!Number.isInteger(input.customPlan.jobCredits) || input.customPlan.jobCredits < 1 || !Number.isInteger(input.customPlan.listingValidityDays) || input.customPlan.listingValidityDays < 1 || !Number.isInteger(input.customPlan.maxCities) || input.customPlan.maxCities < 1)) {
+      throw new AppError("Custom job credits, validity, and city limits must be positive whole numbers.", HTTP_STATUS.BAD_REQUEST);
+    }
+    const discountPercent = Math.min(100, Math.max(0, input.discountPercent ?? 0));
+    const discountAmount = Math.round(plan.priceInr * discountPercent) / 100;
+    if (plan.priceInr - discountAmount < 1) throw new AppError("The discount must leave at least ₹1 payable before GST.", HTTP_STATUS.BAD_REQUEST);
+    const discountedBaseAmount = Math.max(1, Math.round((plan.priceInr - discountAmount) * 100) / 100);
+    const tax = computeGst(discountedBaseAmount);
     const amount = tax.totalAmount;
     const taxFields = {
       baseAmount: tax.baseAmount,
@@ -218,10 +243,16 @@ export const paymentService = {
 
     // Reuse a still-open checkout for the same plan (double clicks, retries).
     // Matching the amount skips sessions opened at an older price / tax rate.
-    const reusable = await PaymentOrderModel.findOne({
+    const reusable = input.allowReuse === false ? null : await PaymentOrderModel.findOne({
       employerId: employerObjectId,
       planCode: plan.code,
+      planName: plan.name,
+      packageLabel: plan.packageLabel,
+      jobCredits: plan.jobCredits,
+      listingValidityDays: plan.listingValidityDays,
+      maxCities: plan.maxCities,
       amount,
+      discountPercent,
       status: { $in: ["created", "failed", "user_dropped"] },
       expiresAt: { $gt: new Date(now.getTime() + REUSE_SESSION_MIN_REMAINING_MS) },
       paymentSessionId: { $ne: "" },
@@ -236,6 +267,9 @@ export const paymentService = {
         environment: reusable.environment,
         planCode: reusable.planCode,
         amount: reusable.amount,
+        planPrice: reusable.planPrice ?? plan.priceInr,
+        discountPercent: reusable.discountPercent ?? 0,
+        discountAmount: reusable.discountAmount ?? 0,
         ...taxFields,
         currency: reusable.currency,
         expiresAt: reusable.expiresAt.toISOString(),
@@ -243,7 +277,7 @@ export const paymentService = {
     }
 
     const orderId = generateMerchantOrderId(now);
-    const expiresAt = new Date(now.getTime() + env.PAYMENT_ORDER_EXPIRY_MINUTES * MS_PER_MINUTE);
+    const expiresAt = new Date(now.getTime() + (input.expiresInMinutes ?? env.PAYMENT_ORDER_EXPIRY_MINUTES) * MS_PER_MINUTE);
     const order = await PaymentOrderModel.create({
       provider: "cashfree",
       orderId,
@@ -253,7 +287,14 @@ export const paymentService = {
           ? new mongoose.Types.ObjectId(input.teamMemberId)
           : null,
       planCode: plan.code,
+      planName: plan.name,
+      jobCredits: plan.jobCredits,
+      listingValidityDays: plan.listingValidityDays,
+      maxCities: plan.maxCities,
       amount,
+      planPrice: plan.priceInr,
+      discountPercent,
+      discountAmount,
       ...taxFields,
       currency: "INR",
       status: "created",
@@ -280,7 +321,7 @@ export const paymentService = {
           name: [employer.firstName, employer.lastName].filter(Boolean).join(" ").trim(),
           email: employer.emailAddress || undefined,
         },
-        returnUrl: resolveCashfreeReturnUrl(),
+        returnUrl: input.returnUrl || resolveCashfreeReturnUrl(),
         notifyUrl,
         expiresAt,
         note: `AsliJobs ${plan.name} plan (incl. ${tax.gstRatePercent}% GST)`,
@@ -318,6 +359,9 @@ export const paymentService = {
       environment: env.CASHFREE_ENV,
       planCode: plan.code,
       amount,
+      planPrice: plan.priceInr,
+      discountPercent,
+      discountAmount,
       ...taxFields,
       currency: "INR",
       expiresAt: expiresAt.toISOString(),
@@ -357,7 +401,7 @@ export const paymentService = {
       throw new AppError("Unauthorized", HTTP_STATUS.UNAUTHORIZED);
     }
 
-    const plan = SUBSCRIPTION_PLANS[order.planCode as PurchasablePlanCode];
+    const plan = SUBSCRIPTION_PLANS[order.planCode as SubscriptionPlanCode];
     const personName = [employer.firstName, employer.lastName].filter(Boolean).join(" ").trim();
     const companyName =
       employer.companyName?.trim() || employer.establishmentName?.trim() || personName;
@@ -372,13 +416,16 @@ export const paymentService = {
 
     const tax = orderTaxBreakdown(order);
     const planHighlights: string[] = [];
-    if (plan?.jobCredits) {
-      planHighlights.push(`${plan.jobCredits} job post${plan.jobCredits === 1 ? "" : "s"}`);
+    const orderJobCredits = order.jobCredits ?? plan?.jobCredits;
+    const orderValidityDays = order.listingValidityDays ?? plan?.listingValidityDays;
+    const orderMaxCities = order.maxCities ?? plan?.maxCities;
+    if (orderJobCredits) {
+      planHighlights.push(`${orderJobCredits} job post${orderJobCredits === 1 ? "" : "s"}`);
     }
-    if (plan?.listingValidityDays) planHighlights.push(`Live ${plan.listingValidityDays} days`);
-    if (plan?.maxCities) {
+    if (orderValidityDays) planHighlights.push(`Live ${orderValidityDays} days`);
+    if (orderMaxCities) {
       planHighlights.push(
-        plan.maxCities === 1 ? "1 city" : `Up to ${plan.maxCities} cities`,
+        orderMaxCities === 1 ? "1 city" : `Up to ${orderMaxCities} cities`,
       );
     }
 
@@ -389,11 +436,14 @@ export const paymentService = {
       paymentMethod: order.paymentGroup,
       bankReference: order.bankReference,
       paidAt: order.paidAt,
-      planName: plan?.name ?? order.planCode,
-      planDescription: plan?.description ?? "",
+      planName: order.planName || plan?.name || order.planCode,
+      planDescription: order.planCode === "enterprise" ? "Custom Business Hiring package" : plan?.description ?? "",
       planHighlights,
       sacCode: env.INVOICE_SAC_CODE,
       baseAmount: tax.baseAmount,
+      planPrice: order.planPrice ?? tax.baseAmount,
+      discountAmount: order.discountAmount ?? 0,
+      discountPercent: order.discountPercent ?? 0,
       gstRatePercent: tax.gstRatePercent,
       gstAmount: tax.gstAmount,
       amount: order.amount,
@@ -479,9 +529,16 @@ export const paymentService = {
         const grant = await subscriptionService.grantForPaidOrder({
           employerId: order.employerId,
           paymentOrderId: order._id,
-          planCode: order.planCode as PurchasablePlanCode,
+          planCode: order.planCode as SubscriptionPlanCode,
           // Grant records the plan price; tax lives on the order/invoice.
           priceInr: orderTaxBreakdown(order).baseAmount,
+          planSnapshot: {
+            name: order.planName || undefined,
+            packageLabel: order.packageLabel || undefined,
+            jobCredits: order.jobCredits ?? undefined,
+            listingValidityDays: order.listingValidityDays ?? undefined,
+            maxCities: order.maxCities ?? undefined,
+          },
         });
         await PaymentOrderModel.updateOne(
           { _id: order._id },

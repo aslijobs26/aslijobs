@@ -26,14 +26,14 @@ import { showAppToast } from "@/utils/share-job";
 import { formatInr } from "@/utils/subscription-upgrade";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { clsx } from "clsx";
-import { Check, Download, Loader2 } from "lucide-react";
+import { Download, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 type Translate = ReturnType<typeof useTranslate>;
 
-const BEST_VALUE_PLAN: PurchasablePlanCode = "growth_999";
+const BEST_VALUE_PLAN: PurchasablePlanCode = "starter_299";
 
 const ORDER_STATUS_TONE: Record<PaymentOrderStatus, string> = {
   created: "bg-amber-50 text-amber-700",
@@ -59,13 +59,32 @@ function citiesLabel(t: Translate, count: number): string {
 function planFeatures(t: Translate, plan: SubscriptionPlan): string[] {
   const features: string[] = [];
   if (plan.jobCredits !== null) features.push(jobsLabel(t, plan.jobCredits));
-  if (plan.listingValidityDays !== null) {
+  else features.push("Unlimited Job Post");
+  if (plan.maxCities !== null) features.push(citiesLabel(t, plan.maxCities));
+  else if (plan.code === "enterprise") features.push("5 City or Region Targeting");
+  features.push("Unlimited Candidate Responses");
+  if (plan.code === "starter_299") features.push("AI Candidate Shortlisting");
+  if (plan.code === "growth_999") {
+    features.push("AI sourcing & shortlisting", "Candidate data access");
+  }
+  if (plan.code === "enterprise") {
     features.push(
-      t("employer.subscriptionPage.validityDays", { days: plan.listingValidityDays }),
+      "AI sourcing, shortlisting & coordination",
+      "Bulk Hiring Support",
+      "Dedicated Account Manager",
     );
   }
-  if (plan.maxCities !== null) features.push(citiesLabel(t, plan.maxCities));
   return features;
+}
+
+function planDisplayName(plan: SubscriptionPlan): string {
+  return plan.name.toUpperCase();
+}
+
+function planValidity(plan: SubscriptionPlan): string {
+  return plan.listingValidityDays === null
+    ? "Valid for 1 Year"
+    : `Valid for ${plan.listingValidityDays} Days`;
 }
 
 function formatDate(value: string | null): string {
@@ -83,13 +102,15 @@ function SectionCard({
   title,
   subtitle,
   children,
+  className,
 }: {
   title: string;
   subtitle?: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <section className="rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5">
+    <section className={clsx("rounded-xl border border-border-subtle bg-surface p-4 shadow-sm sm:p-5", className)}>
       <h2 className="text-base font-bold text-foreground sm:text-lg">{title}</h2>
       {subtitle ? <p className="mt-0.5 text-sm text-muted">{subtitle}</p> : null}
       <div className="mt-4">{children}</div>
@@ -97,7 +118,7 @@ function SectionCard({
   );
 }
 
-function ActiveGrantCard({ grant, t }: { grant: SubscriptionGrant; t: Translate }) {
+function ActiveGrantCard({ grant, planName, t }: { grant: SubscriptionGrant; planName: string; t: Translate }) {
   const percentLeft =
     grant.jobCredits > 0
       ? Math.round((grant.jobCreditsRemaining / grant.jobCredits) * 100)
@@ -105,7 +126,7 @@ function ActiveGrantCard({ grant, t }: { grant: SubscriptionGrant; t: Translate 
   return (
     <li className="rounded-lg border border-border-subtle bg-hero-bg/50 p-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-sm font-bold text-foreground">{grant.planName}</p>
+        <p className="truncate text-sm font-bold text-foreground">{planName}</p>
         {grant.priceInr > 0 ? (
           <span className="shrink-0 text-xs font-semibold text-muted">
             {formatInr(grant.priceInr)}
@@ -151,6 +172,7 @@ function PlanCard({
   buyDisabled,
   onBuy,
   onContactSales,
+  canPostJob,
 }: {
   plan: SubscriptionPlan;
   t: Translate;
@@ -159,12 +181,13 @@ function PlanCard({
   buyDisabled: boolean;
   onBuy: (plan: SubscriptionPlan) => void;
   onContactSales: () => void;
+  canPostJob: boolean;
 }) {
   const isBestValue = plan.code === BEST_VALUE_PLAN;
   const features = planFeatures(t, plan);
 
   const buttonBase =
-    "mt-auto inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60";
+        "mt-auto inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:cursor-not-allowed disabled:opacity-60";
 
   let action: React.ReactNode;
   if (plan.purchasable) {
@@ -173,12 +196,15 @@ function PlanCard({
         type="button"
         onClick={() => onBuy(plan)}
         disabled={buyDisabled}
-        className={clsx(buttonBase, "bg-primary text-surface hover:bg-primary-hover")}
+        className={clsx(
+          buttonBase,
+          isBestValue ? "bg-primary hover:bg-primary-hover" : "bg-neutral-400 hover:bg-neutral-500",
+        )}
       >
         {isBuying ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
         {isBuying
           ? t("employer.subscriptionPage.openingPayment")
-          : t("employer.subscriptionPage.buyNow")}
+          : "Start with Free"}
       </button>
     ) : (
       <p className="mt-auto text-center text-xs text-muted">
@@ -190,37 +216,40 @@ function PlanCard({
       <button
         type="button"
         onClick={onContactSales}
-        className={clsx(
-          buttonBase,
-          "border border-primary text-primary hover:bg-primary-light",
-        )}
+        className={clsx(buttonBase, "bg-neutral-400 hover:bg-neutral-500")}
       >
-        {t("employer.subscriptionPage.contactSales")}
+        Contact Us
       </button>
     );
   } else {
-    action = (
-      <span className={clsx(buttonBase, "bg-hero-bg text-muted")}>
-        {t("employer.subscriptionPage.includedFree")}
-      </span>
+    action = canPostJob ? (
+      <Link
+        href={ROUTES.POST_JOB}
+        className={clsx(buttonBase, "bg-neutral-400 hover:bg-neutral-500")}
+      >
+        Start with Free
+      </Link>
+    ) : (
+      <p className="mt-auto text-center text-xs text-muted">
+        {t("employer.subscriptionPage.noPermissionToBuy")}
+      </p>
     );
   }
 
   return (
     <li
       className={clsx(
-        "relative flex flex-col rounded-xl border bg-surface p-4",
-        isBestValue ? "border-primary shadow-md" : "border-border-subtle",
+        "relative flex min-h-90 flex-col rounded-2xl border border-transparent bg-white p-4 shadow-sm sm:p-5",
       )}
     >
       {isBestValue ? (
-        <span className="absolute -top-2.5 left-4 rounded-full bg-primary px-2 py-0.5 text-[0.6875rem] font-semibold text-surface">
-          {t("employer.subscriptionPage.bestValue")}
+        <span className="absolute right-3 top-3 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-white">
+          Popular
         </span>
       ) : null}
-      <p className="text-sm font-bold text-foreground">{plan.name}</p>
+      <p className="text-sm font-semibold tracking-wide text-primary">{planDisplayName(plan)}</p>
       <p className="mt-1 flex items-baseline gap-1.5">
-        <span className="text-2xl font-bold tabular-nums text-foreground">
+        <span className="mt-2 text-xl font-semibold leading-tight text-foreground">
           {plan.priceInr === null
             ? t("employer.subscriptionPage.customPricing")
             : formatInr(plan.priceInr)}
@@ -229,21 +258,14 @@ function PlanCard({
           <span className="text-xs text-muted">{t("employer.subscriptionPage.perPlan")}</span>
         ) : null}
       </p>
-      {plan.gstRatePercent ? (
-        <p className="text-xs font-medium text-muted">
-          {t("employer.subscriptionPage.plusGst", { rate: plan.gstRatePercent })}
-        </p>
-      ) : null}
-      <p className="mt-1 text-xs leading-snug text-muted">{plan.description}</p>
+      {plan.gstRatePercent ? <p className="text-xs font-medium text-muted">{t("employer.subscriptionPage.plusGst", { rate: plan.gstRatePercent })}</p> : null}
+      <p className="mt-2 text-sm text-foreground">{planValidity(plan)}</p>
+      <hr className="my-3 border-border" />
       {features.length > 0 ? (
-        <ul className="mt-3 mb-4 space-y-1.5">
+        <ul className="mb-4 flex flex-1 flex-col gap-2">
           {features.map((feature) => (
             <li key={feature} className="flex items-start gap-2 text-sm text-foreground">
-              <Check
-                className="mt-0.5 size-4 shrink-0 text-benefit-whatsapp-icon"
-                strokeWidth={2.5}
-                aria-hidden="true"
-              />
+              <span aria-hidden="true" className="mt-0.5">•</span>
               <span>{feature}</span>
             </li>
           ))}
@@ -291,7 +313,7 @@ function PaymentHistory({ orders, t }: { orders: PaymentOrder[]; t: Translate })
   }
   return (
     <div className="-mx-4 overflow-x-auto sm:mx-0">
-      <table className="w-full min-w-[560px] text-left text-sm">
+      <table className="w-full min-w-140 text-left text-sm">
         <thead>
           <tr className="border-b border-border-subtle text-xs text-muted">
             <th className="px-4 py-2 font-medium sm:px-2">
@@ -481,7 +503,12 @@ export function EmployerSubscriptionPageContent() {
             ) : mine && mine.activeGrants.length > 0 ? (
               <ul className="grid gap-3 sm:grid-cols-2">
                 {mine.activeGrants.map((grant) => (
-                  <ActiveGrantCard key={grant.id} grant={grant} t={t} />
+                  <ActiveGrantCard
+                    key={grant.id}
+                    grant={grant}
+                    planName={plansQuery.data?.find((plan) => plan.code === grant.planCode)?.name ?? grant.planName}
+                    t={t}
+                  />
                 ))}
               </ul>
             ) : (
@@ -494,6 +521,7 @@ export function EmployerSubscriptionPageContent() {
       <SectionCard
         title={t("employer.subscriptionPage.plansTitle")}
         subtitle={t("employer.subscriptionPage.plansSubtitle")}
+        className="rounded-2xl border-0 bg-[#e3f5f1] p-3 shadow-none sm:p-5"
       >
         {plansQuery.isLoading ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -515,6 +543,7 @@ export function EmployerSubscriptionPageContent() {
                 canBuy={canBuy}
                 isBuying={buyMutation.isPending && buyMutation.variables === plan.code}
                 buyDisabled={buyMutation.isPending}
+                canPostJob={canPostJob}
                 onBuy={setCheckoutPlan}
                 onContactSales={() => setShowEnterpriseForm(true)}
               />

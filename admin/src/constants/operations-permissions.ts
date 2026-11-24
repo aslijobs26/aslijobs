@@ -134,6 +134,7 @@ export const OPERATIONS_ROLE_PERMISSION_DEFAULTS: Record<
     escalations: readWriteActions(),
     reports: readOnlyActions(),
     content: readWriteActions(),
+    billing: readWriteActions(),
   }),
   SUPPORT: buildPermissionMap({
     dashboard: readOnlyActions(),
@@ -146,6 +147,7 @@ export const OPERATIONS_ROLE_PERMISSION_DEFAULTS: Record<
     jobs: readOnlyActions(),
     placements: readOnlyActions(),
     escalations: readOnlyActions(),
+    billing: readOnlyActions(),
   }),
   MARKETING: buildPermissionMap({
     dashboard: readOnlyActions(),

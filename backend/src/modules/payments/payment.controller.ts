@@ -3,6 +3,7 @@ import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { paymentService } from "./payment.service.js";
+import { paymentLinkService } from "./payment-link.service.js";
 import type { CreatePaymentOrderBody } from "./payment.validation.js";
 
 function requireEmployerId(req: Request): string {
@@ -75,5 +76,11 @@ export const paymentController = {
       body: req.body,
     });
     res.status(HTTP_STATUS.OK).json({ success: true, data: result });
+  },
+  getPublicPaymentLink: async (req: Request, res: Response): Promise<void> => {
+    sendSuccess(res, HTTP_STATUS.OK, { data: await paymentLinkService.getPublic(String(req.params.token)) });
+  },
+  verifyPublicPaymentLink: async (req: Request, res: Response): Promise<void> => {
+    sendSuccess(res, HTTP_STATUS.OK, { data: await paymentLinkService.verifyPublic(String(req.params.token)) });
   },
 };

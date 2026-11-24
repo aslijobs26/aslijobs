@@ -786,7 +786,6 @@ const UNIMPLEMENTED_READ_ONLY: OperationsPermissionModule[] = [
   "dashboard",
   "journey_alerts",
   "reports",
-  "billing",
 ];
 
 export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
@@ -802,6 +801,7 @@ export const OPERATIONS_PERMISSION_CATALOG: OperationsPermissionDefinition[] = [
   ...UNIMPLEMENTED_READ_ONLY.filter((module) => module !== "dashboard").flatMap(
     (module) => coarseModule(module, module.replaceAll("_", " "), ["read"]),
   ),
+  ...coarseModule("billing", "Billing & subscriptions", ["read", "update"]),
   ...myWorkCatalog(),
   ...employerCatalog(),
   ...candidateCatalog(),

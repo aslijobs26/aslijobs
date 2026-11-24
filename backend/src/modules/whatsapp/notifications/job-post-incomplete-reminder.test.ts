@@ -128,10 +128,10 @@ describe("incomplete job draft reminder", () => {
     mock.restoreAll();
   });
 
-  it("reads a 1 minute testing delay and leaves the profile reminder at 30 minutes", () => {
-    assert.equal(env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES, 1);
+  it("reads a 30 minute draft reminder delay and leaves the profile reminder at 30 minutes", () => {
+    assert.equal(env.JOB_POST_INCOMPLETE_REMINDER_DELAY_MINUTES, 30);
     assert.equal(jobPostIncompleteReminderDelayMs(1), 60_000);
-    assert.equal(getJobPostIncompleteReminderDelayMs(), 60_000);
+    assert.equal(getJobPostIncompleteReminderDelayMs(), 1_800_000);
     assert.equal(jobPostIncompleteReminderDelayMs(30), 1_800_000);
     assert.equal(env.EMPLOYER_PROFILE_COMPLETION_REMINDER_DELAY_MINUTES, 30);
     assert.equal(getEmployerProfileCompletionReminderDelayMs(), 1_800_000);

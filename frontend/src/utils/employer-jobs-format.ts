@@ -156,6 +156,15 @@ export function formatEmployerJobLocationFull(
   return cityLabel || stateLabel || "—";
 }
 
+export function formatEmployerJobLocationSet(
+  locations: readonly { cityName?: string; stateName?: string }[] | null | undefined,
+): string {
+  const labels = [...new Set((locations ?? []).map((location) =>
+    [location.cityName?.trim(), location.stateName?.trim()].filter(Boolean).join(", "),
+  ).filter(Boolean))];
+  return labels.length > 1 ? labels.join(" · ") : "";
+}
+
 export function formatEmployerJobLocation(
   cityName: string,
   stateName: string,

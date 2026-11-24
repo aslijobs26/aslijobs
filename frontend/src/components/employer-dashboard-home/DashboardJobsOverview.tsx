@@ -14,6 +14,7 @@ import { cn } from "@/utils/cn";
 import {
   formatEmployerJobCount,
   formatEmployerJobLocation,
+  formatEmployerJobLocationSet,
 } from "@/utils/employer-jobs-format";
 import {
   buildAbsolutePublicJobUrl,
@@ -147,7 +148,7 @@ export function DashboardJobsOverview({
             </thead>
             <tbody className="divide-y divide-border-subtle">
               {jobs.map((job, index) => {
-                const location = formatEmployerJobLocation(
+                const location = formatEmployerJobLocationSet(job.locations) || formatEmployerJobLocation(
                   job.cityName,
                   job.stateName,
                   job.city,

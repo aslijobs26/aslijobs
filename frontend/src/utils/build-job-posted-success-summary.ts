@@ -10,6 +10,7 @@ import type { EmployerJobDetail, JobStatus } from "@/types/employer-jobs";
 import type { JobPostedSuccessSummary } from "@/types/job-posted-success";
 import type { PostJobWizardFormData } from "@/types/post-job";
 import { formatEmployerJobLocationFull } from "@/utils/employer-jobs-format";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 
 type JobPostedApiFields = Partial<
   Pick<
@@ -22,6 +23,7 @@ type JobPostedApiFields = Partial<
     | "cityName"
     | "state"
     | "stateName"
+    | "locations"
     | "jobType"
     | "salaryType"
     | "salaryPeriod"
@@ -153,13 +155,16 @@ export function buildJobPostedSuccessSummary(
   const formTitle = formData.jobInformation.jobTitle.trim();
   const formCompany = formData.jobInformation.companyDetails.trim();
   const formLocation = [
-    formData.locationAndSalary.city.trim(),
-    formData.locationAndSalary.state.trim(),
+    { cityName: formData.locationAndSalary.city, stateName: formData.locationAndSalary.state },
+    ...formData.locationAndSalary.additionalLocations.map((location) => ({ cityName: location.city, stateName: location.state })),
   ]
+    .map((location) => [location.cityName.trim(), location.stateName.trim()].filter(Boolean).join(", "))
     .filter(Boolean)
-    .join(", ");
+    .join(" · ");
 
-  const apiLocation = job
+  const apiLocation = job && formatJobLocationSet(job.locations)
+    ? formatJobLocationSet(job.locations)
+    : job
     ? formatEmployerJobLocationFull(
         job.cityName ?? "",
         job.stateName ?? "",

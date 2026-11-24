@@ -31,18 +31,31 @@ export async function getPublicLocationCounts(): Promise<PublicLocationCounts> {
   const grouped = await JobModel.aggregate<LocationCountAggregate>([
     { $match: { status: "active" } },
     {
-      $group: {
-        _id: {
-          state: { $toLower: { $trim: { input: { $ifNull: ["$state", ""] } } } },
-          stateName: {
-            $toLower: { $trim: { input: { $ifNull: ["$stateName", ""] } } },
-          },
-          city: { $toLower: { $trim: { input: { $ifNull: ["$city", ""] } } } },
-          cityName: { $trim: { input: { $ifNull: ["$cityName", ""] } } },
+      $set: {
+        countLocations: {
+          $cond: [
+            { $gt: [{ $size: { $ifNull: ["$locations", []] } }, 0] },
+            "$locations",
+            [{ state: "$state", stateName: "$stateName", city: "$city", cityName: "$cityName" }],
+          ],
         },
-        count: { $sum: 1 },
       },
     },
+    { $unwind: "$countLocations" },
+    {
+      $group: {
+        _id: {
+          state: { $toLower: { $trim: { input: { $ifNull: ["$countLocations.state", ""] } } } },
+          stateName: {
+            $toLower: { $trim: { input: { $ifNull: ["$countLocations.stateName", ""] } } },
+          },
+          city: { $toLower: { $trim: { input: { $ifNull: ["$countLocations.city", ""] } } } },
+          cityName: { $trim: { input: { $ifNull: ["$countLocations.cityName", ""] } } },
+        },
+        jobIds: { $addToSet: "$_id" },
+      },
+    },
+    { $set: { count: { $size: "$jobIds" } } },
   ]);
 
   const rows: PublicLocationCountRow[] = grouped.map((row) => ({

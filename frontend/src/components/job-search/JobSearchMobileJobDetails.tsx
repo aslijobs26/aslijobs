@@ -4,6 +4,7 @@ import { JobSearchOverviewSkeleton } from "@/components/job-search/JobSearchSkel
 import { JobApplyButton } from "@/components/jobs/JobApplyButton";
 import { JobRecruiterContactDetails } from "@/components/jobs/JobRecruiterContactDetails";
 import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendingNote";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { useSiteLanguage } from "@/i18n/site-language";
 import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
@@ -177,7 +178,7 @@ export function JobSearchMobileJobDetails({
     );
   }
 
-  const location = formatJobSearchLocation(
+  const location = formatJobLocationSet(job.locations) || formatJobSearchLocation(
     job.cityName,
     job.stateName,
     job.city,

@@ -47,6 +47,7 @@ export type SalaryPeriod = "per-month" | "per-year";
 export type LocationAndSalaryFormData = {
   state: string;
   city: string;
+  additionalLocations: Array<{ state: string; city: string }>;
   address: string;
   landmark: string;
   salaryType: SalaryType | "";

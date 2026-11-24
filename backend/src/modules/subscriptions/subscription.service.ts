@@ -8,13 +8,13 @@ import {
   PURCHASABLE_PLAN_CODES,
   SUBSCRIPTION_PLANS,
   SUBSCRIPTION_PLAN_CODES,
-  type PurchasablePlanCode,
   type SubscriptionPlanCode,
 } from "./subscription.constants.js";
 import {
   SubscriptionGrantModel,
   type SubscriptionGrantLean,
 } from "./subscription-grant.model.js";
+import { resolveSubscriptionPlans } from "./subscription-plan.service.js";
 
 export function isDuplicateKeyError(error: unknown): boolean {
   return (
@@ -36,16 +36,16 @@ function toObjectId(id: string | Types.ObjectId): Types.ObjectId {
 }
 
 export function distinctCities(grant: Pick<SubscriptionGrantLean, "consumedJobs">): string[] {
-  return [...new Set((grant.consumedJobs ?? []).map((entry) => entry.cityKey ?? ""))];
+  return [...new Set((grant.consumedJobs ?? []).flatMap((entry) => entry.cityKeys?.length ? entry.cityKeys : [entry.cityKey ?? ""]))];
 }
 
-function toPublicGrant(grant: SubscriptionGrantLean) {
+function toPublicGrant(grant: SubscriptionGrantLean, planName?: string) {
   const plan = SUBSCRIPTION_PLANS[grant.planCode as SubscriptionPlanCode];
   const remaining = Math.max(0, grant.jobCredits - grant.jobCreditsUsed);
   return {
     id: grant._id.toString(),
     planCode: grant.planCode,
-    planName: plan?.name ?? grant.planCode,
+    planName: grant.planName || planName || plan?.name || grant.planCode,
     source: grant.source,
     status: grant.status,
     jobCredits: grant.jobCredits,
@@ -60,9 +60,10 @@ function toPublicGrant(grant: SubscriptionGrantLean) {
 }
 
 export const subscriptionService = {
-  listPlans() {
+  async listPlans() {
+    const plans = await resolveSubscriptionPlans();
     return SUBSCRIPTION_PLAN_CODES.map((code) => {
-      const plan = SUBSCRIPTION_PLANS[code];
+      const plan = plans[code];
       const gst = plan.priceInr && plan.priceInr > 0 ? computeGst(plan.priceInr) : null;
       return {
         code: plan.code,
@@ -89,7 +90,7 @@ export const subscriptionService = {
    */
   async ensureFreeGrant(employerId: string | Types.ObjectId): Promise<void> {
     const employerObjectId = toObjectId(employerId);
-    const plan = SUBSCRIPTION_PLANS.free;
+    const plan = (await resolveSubscriptionPlans()).free;
     try {
       await SubscriptionGrantModel.updateOne(
         { employerId: employerObjectId, planCode: "free" },
@@ -122,13 +123,19 @@ export const subscriptionService = {
 
   async getMySubscription(employerId: string) {
     await this.ensureFreeGrant(employerId);
+    const plans = await resolveSubscriptionPlans();
     const grants = (await SubscriptionGrantModel.find({
       employerId: toObjectId(employerId),
     })
       .sort({ consumePriority: 1, activatedAt: 1 })
       .lean()) as SubscriptionGrantLean[];
 
-    const publicGrants = grants.map(toPublicGrant);
+    const publicGrants = grants.map((grant) =>
+      toPublicGrant(
+        grant,
+        plans[grant.planCode as SubscriptionPlanCode]?.name,
+      ),
+    );
     const remaining = publicGrants.reduce(
       (sum, grant) => sum + grant.jobCreditsRemaining,
       0,
@@ -147,20 +154,29 @@ export const subscriptionService = {
   async grantForPaidOrder(input: {
     employerId: Types.ObjectId;
     paymentOrderId: Types.ObjectId;
-    planCode: PurchasablePlanCode;
+    planCode: SubscriptionPlanCode;
     priceInr: number;
+    planSnapshot?: {
+      name?: string;
+      packageLabel?: string;
+      jobCredits?: number;
+      listingValidityDays?: number;
+      maxCities?: number;
+    };
   }): Promise<SubscriptionGrantLean> {
-    const plan = SUBSCRIPTION_PLANS[input.planCode];
+    const plan = (await resolveSubscriptionPlans())[input.planCode];
     try {
       const created = await SubscriptionGrantModel.create({
         employerId: input.employerId,
         planCode: plan.code,
+        planName: input.planSnapshot?.name ?? plan.name,
+        packageLabel: input.planSnapshot?.packageLabel ?? plan.packageLabel,
         source: "payment",
         consumePriority: GRANT_CONSUME_PRIORITY.payment,
-        jobCredits: plan.jobCredits ?? 0,
+        jobCredits: input.planSnapshot?.jobCredits ?? plan.jobCredits ?? 0,
         jobCreditsUsed: 0,
-        listingValidityDays: plan.listingValidityDays ?? 7,
-        maxCities: plan.maxCities ?? 1,
+        listingValidityDays: input.planSnapshot?.listingValidityDays ?? plan.listingValidityDays ?? 7,
+        maxCities: input.planSnapshot?.maxCities ?? plan.maxCities ?? 1,
         status: "active",
         paymentOrderId: input.paymentOrderId,
         priceInr: input.priceInr,

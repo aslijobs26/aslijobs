@@ -27,6 +27,13 @@ const optionalNullableNumber = z
   .optional()
   .default(null);
 
+const jobLocationSchema = z.object({
+  state: nonEmptyString("State is required"),
+  stateName: nonEmptyString("State is required"),
+  city: nonEmptyString("City is required"),
+  cityName: nonEmptyString("City is required"),
+});
+
 export const createJobSchema = z
   .object({
     companyName: nonEmptyString("Company name is required"),
@@ -61,6 +68,7 @@ export const createJobSchema = z
     stateName: nonEmptyString("State is required"),
     city: nonEmptyString("City is required"),
     cityName: nonEmptyString("City is required"),
+    locations: z.array(jobLocationSchema).max(20).optional().default([]),
     address: nonEmptyString("Job address is required"),
     landmark: optionalString,
     salaryType: z.enum(SALARY_TYPES, {
@@ -601,6 +609,7 @@ const draftWizardSnapshotSchema = z.object({
   locationAndSalary: z.object({
     state: z.string(),
     city: z.string(),
+    additionalLocations: z.array(z.object({ state: z.string(), city: z.string() })).optional().default([]),
     address: z.string(),
     landmark: z.string(),
     salaryType: z.string(),
@@ -682,6 +691,12 @@ function draftSnapshotHasMeaningfulContent(
   ];
 
   if (stringFields.some((value) => value.trim().length > 0)) {
+    return true;
+  }
+
+  if (locationAndSalary.additionalLocations.some((location) =>
+    location.state.trim() || location.city.trim(),
+  )) {
     return true;
   }
 

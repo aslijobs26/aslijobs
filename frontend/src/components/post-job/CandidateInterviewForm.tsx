@@ -10,7 +10,6 @@ import {
   POST_JOB_LONG_TEXT_MAX_LENGTH,
   POST_JOB_WALK_IN_TIME_OPTIONS,
 } from "@/constants/post-job";
-import { ROUTES } from "@/constants/routes";
 import { useTranslate, type MessageKey } from "@/i18n/translate";
 import type {
   AdditionalRequirementsState,
@@ -27,7 +26,6 @@ import {
   formatJobSearchExperience,
   formatJobSearchGender,
 } from "@/utils/job-search-format";
-import Link from "next/link";
 import type { RefObject } from "react";
 import { PostJobChipButton } from "./PostJobChipButton";
 import { PostJobFormField } from "./PostJobFormField";
@@ -58,7 +56,6 @@ type CandidateInterviewFormProps = {
   fieldErrors?: Record<string, string>;
   submitError?: string;
   /** Backend refused the post because the plan ran out (HTTP 402). */
-  submitUpgradeRequired?: boolean;
   isSubmitting?: boolean;
   isEditMode?: boolean;
   onFieldChange: <K extends keyof CandidateInterviewFormData>(
@@ -87,7 +84,6 @@ export function CandidateInterviewForm({
   formData,
   fieldErrors = {},
   submitError,
-  submitUpgradeRequired = false,
   isSubmitting = false,
   isEditMode = false,
   onFieldChange,
@@ -635,14 +631,6 @@ export function CandidateInterviewForm({
               <p className="break-words text-xs font-medium text-red-600">
                 {submitError}
               </p>
-              {submitUpgradeRequired ? (
-                <Link
-                  href={ROUTES.EMPLOYER_SUBSCRIPTION}
-                  className="inline-flex min-h-9 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-surface hover:bg-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
-                >
-                  {t("employer.subscriptionPage.dashboard.viewPlans")}
-                </Link>
-              ) : null}
             </div>
           ) : null}
 

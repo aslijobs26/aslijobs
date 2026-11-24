@@ -12,6 +12,7 @@ import {
   SubscriptionGrantModel,
   type SubscriptionGrantLean,
 } from "./subscription-grant.model.js";
+import { resolveSubscriptionPlans } from "./subscription-plan.service.js";
 import { subscriptionService } from "./subscription.service.js";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -37,7 +38,7 @@ type GrantForEvaluation = {
   jobCredits: number;
   jobCreditsUsed: number;
   maxCities: number;
-  consumedJobs: Array<{ jobId: Types.ObjectId | string; cityKey?: string | null }>;
+  consumedJobs: Array<{ jobId: Types.ObjectId | string; cityKey?: string | null; cityKeys?: string[] }>;
 };
 
 function normalizeLocationPart(value: string | null | undefined): string {
@@ -72,12 +73,23 @@ export function grantAcceptsCity(
   cityKey: string,
   excludeJobId?: string,
 ): boolean {
-  const cities = new Set(
-    grant.consumedJobs
-      .filter((entry) => !excludeJobId || String(entry.jobId) !== excludeJobId)
-      .map((entry) => entry.cityKey ?? ""),
-  );
-  return cities.has(cityKey) || cities.size < grant.maxCities;
+  return grantAcceptsCities(grant, [cityKey], excludeJobId);
+}
+
+export function grantAcceptsCities(
+  grant: GrantForEvaluation,
+  cityKeys: readonly string[],
+  excludeJobId?: string,
+): boolean {
+  const cities = new Set<string>();
+  for (const entry of grant.consumedJobs) {
+    if (excludeJobId && String(entry.jobId) === excludeJobId) continue;
+    for (const key of entry.cityKeys?.length ? entry.cityKeys : [entry.cityKey ?? ""]) {
+      if (key) cities.add(key);
+    }
+  }
+  for (const key of cityKeys) if (key) cities.add(key);
+  return cities.size <= grant.maxCities;
 }
 
 export function grantHasFreeCredit(grant: GrantForEvaluation): boolean {
@@ -110,17 +122,38 @@ function toObjectId(id: string | Types.ObjectId): Types.ObjectId {
   return typeof id === "string" ? new mongoose.Types.ObjectId(id) : id;
 }
 
-/** Mongo aggregation expression: distinct city keys in consumedJobs. */
+/** Mongo aggregation expression: distinct legacy and multi-location city keys. */
 const DISTINCT_CITIES_EXPR = {
-  $setUnion: [{ $ifNull: ["$consumedJobs.cityKey", []] }, []],
+  $reduce: {
+    input: { $ifNull: ["$consumedJobs", []] },
+    initialValue: [],
+    in: {
+      $setUnion: [
+        "$$value",
+        {
+          $concatArrays: [
+            { $ifNull: ["$$this.cityKeys", []] },
+            {
+              $cond: [
+                { $ne: [{ $ifNull: ["$$this.cityKey", ""] }, ""] },
+                ["$$this.cityKey"],
+                [],
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  },
 };
 
-function attachmentFromGrant(grant: SubscriptionGrantLean): JobCreditAttachment {
+async function attachmentFromGrant(grant: SubscriptionGrantLean): Promise<JobCreditAttachment> {
   const planCode = grant.planCode as SubscriptionPlanCode;
+  const plans = await resolveSubscriptionPlans();
   return {
     grantId: grant._id,
     planCode,
-    packageLabel: SUBSCRIPTION_PLANS[planCode]?.packageLabel ?? "",
+    packageLabel: grant.packageLabel || plans[planCode]?.packageLabel || SUBSCRIPTION_PLANS[planCode]?.packageLabel || "",
     listingValidityDays: grant.listingValidityDays,
   };
 }
@@ -131,16 +164,19 @@ export const subscriptionEntitlementService = {
   },
 
   /**
-   * Atomically consumes one job credit for `jobId` in `cityKey`.
+   * Atomically consumes one job credit for `jobId` and all selected cities.
    * Free first, then oldest paid grant. Returns null when none is available.
    */
   async consumeCredit(input: {
     employerId: string | Types.ObjectId;
     jobId: Types.ObjectId;
     cityKey: string;
+    cityKeys?: string[];
   }): Promise<JobCreditAttachment | null> {
     await subscriptionService.ensureFreeGrant(input.employerId);
     const employerObjectId = toObjectId(input.employerId);
+    const requestedCityKeys = [...new Set([input.cityKey, ...(input.cityKeys ?? [])].filter(Boolean))];
+    const combinedCities = { $setUnion: [DISTINCT_CITIES_EXPR, requestedCityKeys] };
 
     const grant = (await SubscriptionGrantModel.findOneAndUpdate(
       {
@@ -149,12 +185,7 @@ export const subscriptionEntitlementService = {
         $expr: {
           $and: [
             { $lt: ["$jobCreditsUsed", "$jobCredits"] },
-            {
-              $or: [
-                { $in: [input.cityKey, DISTINCT_CITIES_EXPR] },
-                { $lt: [{ $size: DISTINCT_CITIES_EXPR }, "$maxCities"] },
-              ],
-            },
+            { $lte: [{ $size: combinedCities }, "$maxCities"] },
           ],
         },
       },
@@ -164,6 +195,7 @@ export const subscriptionEntitlementService = {
           consumedJobs: {
             jobId: input.jobId,
             cityKey: input.cityKey,
+            cityKeys: requestedCityKeys,
             consumedAt: new Date(),
           },
         },
@@ -199,6 +231,7 @@ export const subscriptionEntitlementService = {
     employerId: string | Types.ObjectId;
     jobId: Types.ObjectId;
     cityKey: string;
+    cityKeys?: string[];
     onBlocked?: () => Promise<CreditErrorExtras | void>;
   }): Promise<JobCreditAttachment> {
     const attachment = await this.consumeCredit(input);
@@ -269,36 +302,48 @@ export const subscriptionEntitlementService = {
     grantId: Types.ObjectId;
     jobId: Types.ObjectId;
     cityKey: string;
+    cityKeys?: string[];
   }): Promise<boolean> {
+    const requestedCityKeys = [...new Set([input.cityKey, ...(input.cityKeys ?? [])].filter(Boolean))];
     const otherCities = {
-      $setUnion: [
-        {
-          $map: {
-            input: {
-              $filter: {
-                input: { $ifNull: ["$consumedJobs", []] },
-                cond: { $ne: ["$$this.jobId", input.jobId] },
-              },
-            },
-            in: "$$this.cityKey",
+      $reduce: {
+        input: {
+          $filter: {
+            input: { $ifNull: ["$consumedJobs", []] },
+            cond: { $ne: ["$$this.jobId", input.jobId] },
           },
         },
-        [],
-      ],
+        initialValue: [],
+        in: {
+          $setUnion: [
+            "$$value",
+            {
+              $concatArrays: [
+                { $ifNull: ["$$this.cityKeys", []] },
+                {
+                  $cond: [
+                    { $ne: [{ $ifNull: ["$$this.cityKey", ""] }, ""] },
+                    ["$$this.cityKey"],
+                    [],
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
     };
 
     const result = await SubscriptionGrantModel.updateOne(
       {
         _id: input.grantId,
         "consumedJobs.jobId": input.jobId,
-        $expr: {
-          $or: [
-            { $in: [input.cityKey, otherCities] },
-            { $lt: [{ $size: otherCities }, "$maxCities"] },
-          ],
-        },
+        $expr: { $lte: [{ $size: { $setUnion: [otherCities, requestedCityKeys] } }, "$maxCities"] },
       },
-      { $set: { "consumedJobs.$[entry].cityKey": input.cityKey } },
+      { $set: {
+        "consumedJobs.$[entry].cityKey": input.cityKey,
+        "consumedJobs.$[entry].cityKeys": requestedCityKeys,
+      } },
       { arrayFilters: [{ "entry.jobId": input.jobId }] },
     );
 
@@ -318,6 +363,7 @@ export const subscriptionEntitlementService = {
     grantId: Types.ObjectId;
     jobId: Types.ObjectId;
     cityKey: string;
+    cityKeys?: string[];
   }): Promise<boolean> {
     const grant = (await SubscriptionGrantModel.findById(input.grantId)
       .select("status jobCredits jobCreditsUsed maxCities consumedJobs")
@@ -325,7 +371,11 @@ export const subscriptionEntitlementService = {
     if (!grant) {
       return true;
     }
-    return grantAcceptsCity(grant, input.cityKey, input.jobId.toString());
+    return grantAcceptsCities(
+      grant,
+      [input.cityKey, ...(input.cityKeys ?? [])],
+      input.jobId.toString(),
+    );
   },
 
   async getListingValidUntil(
@@ -376,7 +426,7 @@ export const subscriptionEntitlementService = {
 
   buildCityLimitError(extras?: CreditErrorExtras): AppError {
     return new AppError(
-      "Your plan for this job does not allow another city. Keep the current city or buy a new plan.",
+      "Your plan does not allow another location. Remove a location or buy a plan with a higher location limit.",
       HTTP_STATUS.PAYMENT_REQUIRED,
       {
         code: PLAN_CITY_LIMIT_CODE,

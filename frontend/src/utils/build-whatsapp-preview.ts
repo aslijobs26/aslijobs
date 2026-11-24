@@ -43,8 +43,13 @@ function formatSalary(formData: PostJobWizardFormData): string {
 
 function formatLocation(formData: PostJobWizardFormData): string {
   const { city, state } = formData.locationAndSalary;
-  const parts = [city.trim(), state.trim()].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : "";
+  return [
+    { city, state },
+    ...formData.locationAndSalary.additionalLocations,
+  ]
+    .map((location) => [location.city.trim(), location.state.trim()].filter(Boolean).join(", "))
+    .filter(Boolean)
+    .join(" · ");
 }
 
 function formatPerks(formData: PostJobWizardFormData): string {

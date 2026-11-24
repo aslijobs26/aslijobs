@@ -10,6 +10,7 @@ const consumedJobSchema = new Schema(
   {
     jobId: { type: Schema.Types.ObjectId, ref: "Job", required: true },
     cityKey: { type: String, trim: true, default: "" },
+    cityKeys: { type: [String], default: [] },
     consumedAt: { type: Date, default: Date.now },
   },
   { _id: false },
@@ -29,6 +30,8 @@ const subscriptionGrantSchema = new Schema(
       index: true,
     },
     planCode: { type: String, enum: SUBSCRIPTION_PLAN_CODES, required: true },
+    planName: { type: String, trim: true, default: "" },
+    packageLabel: { type: String, trim: true, default: "" },
     source: { type: String, enum: SUBSCRIPTION_GRANT_SOURCES, required: true },
     /** Lower is consumed first. Free = 0, paid = 1. */
     consumePriority: { type: Number, required: true, default: 1 },

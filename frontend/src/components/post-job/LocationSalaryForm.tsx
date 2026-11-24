@@ -55,6 +55,8 @@ type LocationSalaryFormProps = {
   ) => void;
   onBack: () => void;
   onContinue: () => void;
+  onAddLocation: () => void;
+  isSaving?: boolean;
   scrollContainerRef?: RefObject<HTMLFormElement | null>;
 };
 
@@ -64,6 +66,8 @@ export function LocationSalaryForm({
   onFieldChange,
   onBack,
   onContinue,
+  onAddLocation,
+  isSaving = false,
   scrollContainerRef,
 }: LocationSalaryFormProps) {
   const t = useTranslate();
@@ -153,6 +157,54 @@ export function LocationSalaryForm({
               />
             </PostJobFormField>
           </div>
+
+          {formData.additionalLocations.map((location, index) => (
+            <div key={index} className="rounded-xl border border-border-subtle p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-foreground">Additional location {index + 2}</p>
+                <button
+                  type="button"
+                  className="text-sm font-semibold text-red-600 hover:underline"
+                  onClick={() => onFieldChange("additionalLocations", formData.additionalLocations.filter((_, itemIndex) => itemIndex !== index))}
+                >
+                  Remove
+                </button>
+              </div>
+              <div className={postJobFormGridGapClassName}>
+                <PostJobFormField id={`additional-location-${index}-state`} label={t("employer.postJob.state")} error={fieldErrors[`additionalLocations.${index}.state`]}>
+                  <PostJobPlaceAutocomplete
+                    id={`additional-location-${index}-state`}
+                    mode="state"
+                    value={location.state}
+                    placeholder={t("employer.postJob.searchState")}
+                    hasError={Boolean(fieldErrors[`additionalLocations.${index}.state`])}
+                    onChange={(value) => onFieldChange("additionalLocations", formData.additionalLocations.map((item, itemIndex) => itemIndex === index ? { state: value, city: "" } : item))}
+                    onSelect={(suggestion) => onFieldChange("additionalLocations", formData.additionalLocations.map((item, itemIndex) => itemIndex === index ? { state: suggestion.state, city: "" } : item))}
+                  />
+                </PostJobFormField>
+                <PostJobFormField id={`additional-location-${index}-city`} label={t("employer.postJob.city")} error={fieldErrors[`additionalLocations.${index}.city`]}>
+                  <PostJobPlaceAutocomplete
+                    id={`additional-location-${index}-city`}
+                    mode="city"
+                    value={location.city}
+                    selectedState={location.state}
+                    disabled={!location.state.trim()}
+                    placeholder={location.state.trim() ? t("employer.postJob.searchCity") : t("jobs.selectStateFirst")}
+                    hasError={Boolean(fieldErrors[`additionalLocations.${index}.city`])}
+                    onChange={(value) => onFieldChange("additionalLocations", formData.additionalLocations.map((item, itemIndex) => itemIndex === index ? { ...item, city: value } : item))}
+                    onSelect={(suggestion) => onFieldChange("additionalLocations", formData.additionalLocations.map((item, itemIndex) => itemIndex === index ? { ...item, city: suggestion.city } : item))}
+                  />
+                </PostJobFormField>
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="inline-flex min-h-10 items-center justify-center self-start rounded-lg border border-primary px-3 text-sm font-semibold text-primary hover:bg-primary-light"
+            onClick={onAddLocation}
+          >
+            + Add another location
+          </button>
 
           <PostJobFormField
             id="job-address"
@@ -336,12 +388,13 @@ export function LocationSalaryForm({
             </button>
             <button
               type="submit"
+              disabled={isSaving}
               className={cn(
                 postJobContinueButtonClassName,
-                "w-full sm:w-auto sm:min-w-[156px]",
+                "w-full sm:w-auto sm:min-w-[156px] disabled:cursor-wait disabled:opacity-70",
               )}
             >
-              {t("common.continue")}
+              {isSaving ? "Saving draft…" : t("common.continue")}
             </button>
           </div>
         </div>

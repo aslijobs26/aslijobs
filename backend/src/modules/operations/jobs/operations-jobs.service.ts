@@ -2210,6 +2210,7 @@ export const operationsJobsService = {
           grantId: freshJob.subscriptionGrantId,
           jobId: freshJob._id,
           cityKey: buildJobCityKey(freshJob),
+          cityKeys: (freshJob.locations?.length ? freshJob.locations : [freshJob]).map(buildJobCityKey).filter(Boolean),
         })
         .catch(() => false);
       if (!cityTracked) {

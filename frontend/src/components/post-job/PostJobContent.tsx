@@ -13,6 +13,7 @@ import {
 import { getCompanyStrengthValueFromRange } from "@/constants/employer-register";
 import { EMPLOYER_JOBS_QUERY_KEYS } from "@/constants/employer-jobs";
 import { ROUTES } from "@/constants/routes";
+import { fetchMySubscription, subscriptionQueryKeys } from "@/services/subscription.service";
 import { useTranslate } from "@/i18n/translate";
 import {
   createEmployerJob,
@@ -51,7 +52,7 @@ import type {
   PostJobFormData,
   PostJobWizardFormData,
 } from "@/types/post-job";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import {
   useCallback,
@@ -87,10 +88,11 @@ function PostJobActiveSection({
   formData,
   fieldErrors,
   submitError,
-  submitUpgradeRequired,
   isSubmitting,
+  isSavingStep,
   isEditMode,
   accountType,
+  onAddLocation,
   onJobInformationChange,
   onLocationSalaryChange,
   onCandidateInterviewChange,
@@ -105,10 +107,11 @@ function PostJobActiveSection({
   formData: PostJobWizardFormData;
   fieldErrors: PostJobFieldErrors;
   submitError: string;
-  submitUpgradeRequired: boolean;
   isSubmitting: boolean;
+  isSavingStep: boolean;
   isEditMode: boolean;
   accountType: EmployerAccountType | null;
+  onAddLocation: () => void;
   onJobInformationChange: <K extends keyof PostJobFormData>(
     field: K,
     value: PostJobFormData[K],
@@ -134,6 +137,7 @@ function PostJobActiveSection({
         formData={formData.jobInformation}
         fieldErrors={fieldErrors}
         accountType={accountType}
+        isSaving={isSavingStep}
         onFieldChange={onJobInformationChange}
         onContinue={onContinueStep1}
         scrollContainerRef={scrollContainerRef}
@@ -145,6 +149,8 @@ function PostJobActiveSection({
     return (
       <LocationSalaryForm
         formData={formData.locationAndSalary}
+        onAddLocation={onAddLocation}
+        isSaving={isSavingStep}
         fieldErrors={fieldErrors}
         onFieldChange={onLocationSalaryChange}
         onBack={onBackToStep1}
@@ -159,7 +165,6 @@ function PostJobActiveSection({
       formData={formData.candidateAndInterview}
       fieldErrors={fieldErrors}
       submitError={submitError}
-      submitUpgradeRequired={submitUpgradeRequired}
       isSubmitting={isSubmitting}
       isEditMode={isEditMode}
       onFieldChange={onCandidateInterviewChange}
@@ -178,6 +183,17 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   const router = useRouter();
   const t = useTranslate();
   const queryClient = useQueryClient();
+  const subscriptionQuery = useQuery({
+    queryKey: subscriptionQueryKeys.mine,
+    queryFn: fetchMySubscription,
+    staleTime: 60_000,
+  });
+  const maxLocations = Math.max(
+    1,
+    ...(subscriptionQuery.data?.activeGrants
+      .filter((grant) => grant.jobCreditsRemaining > 0)
+      .map((grant) => grant.maxCities) ?? []),
+  );
   const [activeStep, setActiveStep] =
     useState<PostJobActiveStep>(POST_JOB_INITIAL_STEP);
   const [formData, setFormData] = useState<PostJobWizardFormData>(
@@ -185,8 +201,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
   );
   const [fieldErrors, setFieldErrors] = useState<PostJobFieldErrors>({});
   const [submitError, setSubmitError] = useState("");
-  const [submitUpgradeRequired, setSubmitUpgradeRequired] = useState(false);
+  const [showNoCreditsDialog, setShowNoCreditsDialog] = useState(false);
+  const [showLocationUpgradeDialog, setShowLocationUpgradeDialog] = useState(false);
+  const [isOpeningSubscription, setIsOpeningSubscription] = useState(false);
+  const [locationDraftSaveError, setLocationDraftSaveError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingStep, setIsSavingStep] = useState(false);
+  const [draftSaveError, setDraftSaveError] = useState("");
   const isSubmittingRef = useRef(false);
   const [isHydratingDraft, setIsHydratingDraft] = useState(Boolean(draftJobId));
   const [draftLoadError, setDraftLoadError] = useState<
@@ -341,9 +362,6 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
         };
         poll();
       });
-      if (!options?.force) {
-        return draftIdRef.current;
-      }
     }
 
     const currentFormData = formDataRef.current;
@@ -381,8 +399,11 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
         queryKey: EMPLOYER_JOBS_QUERY_KEYS.all,
       });
       return draftIdRef.current;
-    } catch {
+    } catch (error) {
       // Autosave failures should not interrupt form editing.
+      if (options?.force) {
+        throw error;
+      }
       return draftIdRef.current;
     } finally {
       isSavingDraftRef.current = false;
@@ -575,6 +596,38 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     }));
   };
 
+  const handleAddLocation = async () => {
+    const { data } = await subscriptionQuery.refetch();
+    const currentMaxLocations = Math.max(
+      1,
+      ...(data?.activeGrants
+        .filter((grant) => grant.jobCreditsRemaining > 0)
+        .map((grant) => grant.maxCities) ?? []),
+    );
+    if (formDataRef.current.locationAndSalary.additionalLocations.length + 1 < currentMaxLocations) {
+      updateLocationAndSalary("additionalLocations", [
+        ...formDataRef.current.locationAndSalary.additionalLocations,
+        { state: "", city: "" },
+      ]);
+      return;
+    }
+    setShowLocationUpgradeDialog(true);
+  };
+
+  const openSubscriptionPage = async () => {
+    if (isOpeningSubscription) return;
+    setIsOpeningSubscription(true);
+    setLocationDraftSaveError("");
+    try {
+      await persistDraft({ force: true });
+      router.push(ROUTES.EMPLOYER_SUBSCRIPTION);
+    } catch (error) {
+      setLocationDraftSaveError(getApiErrorMessage(error, "Could not save your job draft. Please try again."));
+    } finally {
+      setIsOpeningSubscription(false);
+    }
+  };
+
   const updateCandidateAndInterview = <
     K extends keyof CandidateInterviewFormData,
   >(
@@ -591,9 +644,25 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     }));
   };
 
+  const saveCurrentStepDraft = async (): Promise<void> => {
+    setIsSavingStep(true);
+    setDraftSaveError("");
+    try {
+      await persistDraft({ force: true });
+    } catch (error) {
+      setDraftSaveError(
+        getApiErrorMessage(error, "Could not save your job draft. Please try again."),
+      );
+      return;
+    } finally {
+      setIsSavingStep(false);
+    }
+  };
+
   const handleStepChange = (step: PostJobActiveStep) => {
+    if (isSavingStep) return;
     setSubmitError("");
-    setSubmitUpgradeRequired(false);
+    setShowNoCreditsDialog(false);
 
     if (step > activeStep) {
       for (
@@ -611,27 +680,33 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       }
     }
 
+    if (step > activeStep) void saveCurrentStepDraft();
+
     setFieldErrors({});
     setActiveStep(step);
   };
 
-  const handleContinueStep1 = () => {
+  const handleContinueStep1 = async () => {
+    if (isSavingStep) return;
     const errors = validatePostJobStep(1, formData, validationContext);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       scheduleFocusFirstInvalidField(errors);
       return;
     }
+    void saveCurrentStepDraft();
     setActiveStep(2);
   };
 
-  const handleContinueStep2 = () => {
+  const handleContinueStep2 = async () => {
+    if (isSavingStep) return;
     const errors = validatePostJobStep(2, formData);
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       scheduleFocusFirstInvalidField(errors);
       return;
     }
+    void saveCurrentStepDraft();
     setActiveStep(3);
   };
 
@@ -641,7 +716,7 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
     }
 
     setSubmitError("");
-    setSubmitUpgradeRequired(false);
+    setShowNoCreditsDialog(false);
     setVerificationGate(null);
 
     if (!getEmployerAccessToken()) {
@@ -730,10 +805,14 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           verificationStatus: resolved.verificationStatus,
         });
       } else {
-        setSubmitUpgradeRequired(isSubscriptionUpgradeRequired(error));
-        setSubmitError(
-          getApiErrorMessage(error, t("employer.postJob.postFailed")),
-        );
+        if (isSubscriptionUpgradeRequired(error)) {
+          setSubmitError("");
+          setShowNoCreditsDialog(true);
+        } else {
+          setSubmitError(
+            getApiErrorMessage(error, t("employer.postJob.postFailed")),
+          );
+        }
       }
     } finally {
       isSubmittingRef.current = false;
@@ -771,6 +850,16 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
       {isSubmitting ? (
         <PostJobSubmittingOverlay isEditMode={isActiveEditMode} />
       ) : null}
+      {draftSaveError ? (
+        <p className="mb-3 text-sm text-red-600" role="alert">
+          {draftSaveError}
+        </p>
+      ) : null}
+      {isSavingStep ? (
+        <p className="mb-3 text-sm text-muted" role="status" aria-live="polite">
+          Saving your progress…
+        </p>
+      ) : null}
       <div className={postJobLayoutGridClassName}>
         <PostJobStepper activeStep={activeStep} onStepChange={handleStepChange} />
 
@@ -781,10 +870,13 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
               formData={formData}
               fieldErrors={fieldErrors}
               submitError={submitError}
-              submitUpgradeRequired={submitUpgradeRequired}
               isSubmitting={isSubmitting}
+              isSavingStep={isSavingStep}
               isEditMode={isActiveEditMode}
               accountType={accountType}
+              onAddLocation={() => {
+                void handleAddLocation();
+              }}
               onJobInformationChange={updateJobInformation}
               onLocationSalaryChange={updateLocationAndSalary}
               onCandidateInterviewChange={updateCandidateAndInterview}
@@ -804,6 +896,88 @@ export function PostJobContent({ draftJobId }: PostJobContentProps) {
           </div>
         </div>
       </div>
+      {showNoCreditsDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="no-credits-title"
+            className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl"
+          >
+            <h2 id="no-credits-title" className="text-lg font-bold text-foreground">
+              {t("employer.subscriptionPage.noCreditsDialogTitle")}
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              {t("employer.subscriptionPage.noCreditsDialogBody")}
+            </p>
+            {locationDraftSaveError ? (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {locationDraftSaveError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="min-h-10 rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-primary-light"
+                onClick={() => setShowNoCreditsDialog(false)}
+                disabled={isOpeningSubscription}
+              >
+                {t("employer.subscriptionPage.checkout.cancel")}
+              </button>
+              <button
+                type="button"
+                className="min-h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                onClick={() => void openSubscriptionPage()}
+                disabled={isOpeningSubscription}
+              >
+                {isOpeningSubscription
+                  ? "Saving draft…"
+                  : t("employer.subscriptionPage.dashboard.viewPlans")}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {showLocationUpgradeDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40 p-4">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="location-upgrade-title"
+            className="w-full max-w-md rounded-2xl bg-surface p-5 shadow-xl"
+          >
+            <h2 id="location-upgrade-title" className="text-lg font-bold text-foreground">
+              Add more job locations
+            </h2>
+            <p className="mt-2 text-sm text-muted">
+              Your current plan allows up to {maxLocations} {maxLocations === 1 ? "city" : "cities"} per job. View subscription plans to add more locations.
+            </p>
+            {locationDraftSaveError ? (
+              <p className="mt-3 text-sm text-red-600" role="alert">
+                {locationDraftSaveError}
+              </p>
+            ) : null}
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="min-h-10 rounded-lg border border-border-subtle px-4 text-sm font-semibold text-foreground hover:bg-primary-light"
+                onClick={() => setShowLocationUpgradeDialog(false)}
+                disabled={isOpeningSubscription}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="min-h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                onClick={() => void openSubscriptionPage()}
+                disabled={isOpeningSubscription}
+              >
+                {isOpeningSubscription ? "Saving draft…" : "View plans"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {verificationGate ? (
         <EmployerVerificationRequiredModal
           verificationStatus={verificationGate.verificationStatus}

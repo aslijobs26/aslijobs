@@ -54,6 +54,14 @@ export const POST_JOB_FIELD_ELEMENT_IDS: Record<string, string> = {
   contactMobile: "contact-mobile",
 };
 
+function fieldElementId(field: string): string {
+  const additionalLocationMatch = field.match(/^additionalLocations\.(\d+)\.(state|city)$/);
+  if (additionalLocationMatch) {
+    return `additional-location-${additionalLocationMatch[1]}-${additionalLocationMatch[2]}`;
+  }
+  return POST_JOB_FIELD_ELEMENT_IDS[field] ?? field;
+}
+
 function requireText(
   value: string,
   field: string,
@@ -83,7 +91,7 @@ export function focusFirstInvalidPostJobField(errors: PostJobFieldErrors) {
     return;
   }
 
-  const elementId = POST_JOB_FIELD_ELEMENT_IDS[firstField] ?? firstField;
+  const elementId = fieldElementId(firstField);
   const element = document.getElementById(elementId);
 
   if (!element) {
@@ -238,6 +246,20 @@ export function validateLocationSalaryStep(
 
   requireText(formData.state, "state", "Please select State.", errors);
   requireText(formData.city, "city", "Please enter City.", errors);
+  const locationKeys = new Set([
+    `${formData.state.trim().toLowerCase()}::${formData.city.trim().toLowerCase()}`,
+  ]);
+  formData.additionalLocations.forEach((location, index) => {
+    requireText(location.state, `additionalLocations.${index}.state`, "Please select State.", errors);
+    requireText(location.city, `additionalLocations.${index}.city`, "Please select City.", errors);
+    if (location.state.trim() && location.city.trim()) {
+      const key = `${location.state.trim().toLowerCase()}::${location.city.trim().toLowerCase()}`;
+      if (locationKeys.has(key)) {
+        errors[`additionalLocations.${index}.city`] = "Select a different location.";
+      }
+      locationKeys.add(key);
+    }
+  });
   requireText(formData.address, "address", "Please enter Address.", errors);
 
   if (!formData.salaryType) {

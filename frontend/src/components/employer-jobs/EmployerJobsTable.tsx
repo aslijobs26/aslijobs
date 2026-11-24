@@ -14,6 +14,7 @@ import {
   formatEmployerJobCount,
   formatEmployerJobLocation,
   formatEmployerJobLocationFull,
+  formatEmployerJobLocationSet,
   formatEmployerJobPostedAbsolute,
   getEmployerJobPostedAt,
 } from "@/utils/employer-jobs-format";
@@ -431,7 +432,7 @@ function EmployerJobsTableRow({
     job.city,
     job.state,
   );
-  const locationFull = formatEmployerJobLocationFull(
+  const locationFull = formatEmployerJobLocationSet(job.locations) || formatEmployerJobLocationFull(
     job.cityName,
     job.stateName,
     job.city,

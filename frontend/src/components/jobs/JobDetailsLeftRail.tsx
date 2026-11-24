@@ -20,6 +20,7 @@ import {
   jobSearchStateToSearchParams,
 } from "@/utils/job-search-url";
 import { formatJobSearchSalaryCompact } from "@/utils/job-search-format";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Wallet } from "lucide-react";
 import Link from "next/link";
@@ -120,7 +121,7 @@ function toRailJob(job: PublicJobListItem): JobDetailsRailJob {
     id: job.jobId,
     title: job.jobTitle,
     company: job.companyName,
-    location: buildJobSearchLocationLabel(
+    location: formatJobLocationSet(job.locations) || buildJobSearchLocationLabel(
       job.cityName,
       job.stateName,
       job.city,

@@ -8,6 +8,7 @@ import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import { trackAnalyticsEvent } from "@/components/analytics/track-analytics-event";
 import { protectedApply } from "@/utils/job-apply-auth";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 import { cn } from "@/utils/cn";
 import {
   formatJobSearchEducation,
@@ -123,7 +124,7 @@ export function JobSearchJobCard({
   const [isApplying, setIsApplying] = useState(false);
   const [appliedLocally, setAppliedLocally] = useState(false);
   const isApplied = appliedLocally || job.isApplied === true;
-  const location = formatJobSearchLocationCompact(
+  const location = formatJobLocationSet(job.locations) || formatJobSearchLocationCompact(
     job.cityName,
     job.stateName,
     job.city,

@@ -263,6 +263,7 @@ export function JobInformationForm({
   formData,
   fieldErrors = {},
   accountType = null,
+  isSaving = false,
   onFieldChange,
   onContinue,
   scrollContainerRef,
@@ -270,6 +271,7 @@ export function JobInformationForm({
   formData: PostJobFormData;
   fieldErrors?: Record<string, string>;
   accountType?: EmployerAccountType | null;
+  isSaving?: boolean;
   onFieldChange: <K extends keyof PostJobFormData>(
     field: K,
     value: PostJobFormData[K],
@@ -666,9 +668,10 @@ export function JobInformationForm({
       <div className={cn(postJobFormInlineActionsClassName, "flex-row justify-end")}>
         <button
           type="submit"
-          className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover sm:h-12 sm:w-auto sm:min-w-[148px]"
+          disabled={isSaving}
+          className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary-soft px-8 text-sm font-bold text-white transition-colors hover:bg-primary-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 active:bg-primary-soft-hover disabled:cursor-wait disabled:opacity-70 sm:h-12 sm:w-auto sm:min-w-[148px]"
         >
-          {t("common.continue")}
+          {isSaving ? "Saving draft…" : t("common.continue")}
         </button>
       </div>
     </>

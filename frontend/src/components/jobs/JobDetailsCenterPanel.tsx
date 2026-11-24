@@ -11,6 +11,7 @@ import { JobTranslationPendingNote } from "@/components/jobs/JobTranslationPendi
 import { JobDescriptionContent } from "@/components/ui/JobDescriptionContent";
 import { protectedApply } from "@/utils/job-apply-auth";
 import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 import {
   formatJobSearchEducation,
   formatJobSearchExperience,
@@ -187,7 +188,7 @@ export function JobDetailsCenterPanel({
   }
 
   const salary = formatJobSearchSalary(job, language);
-  const location = formatJobSearchLocation(
+  const location = formatJobLocationSet(job.locations) || formatJobSearchLocation(
     job.cityName,
     job.stateName,
     job.city,

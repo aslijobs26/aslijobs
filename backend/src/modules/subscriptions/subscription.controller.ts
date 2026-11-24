@@ -7,7 +7,7 @@ import type { EnterpriseEnquiryBody } from "./subscription.validation.js";
 
 export const subscriptionController = {
   listPlans: async (_req: Request, res: Response): Promise<void> => {
-    sendSuccess(res, HTTP_STATUS.OK, { data: subscriptionService.listPlans() });
+    sendSuccess(res, HTTP_STATUS.OK, { data: await subscriptionService.listPlans() });
   },
 
   getMine: async (req: Request, res: Response): Promise<void> => {

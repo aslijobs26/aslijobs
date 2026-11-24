@@ -156,11 +156,6 @@ export const OPERATIONS_ROUTE_PERMISSION_RULES: OperationsRoutePermissionRule[] 
       action: "read",
     },
     {
-      prefix: OPERATIONS_ROUTES.SUBSCRIPTIONS,
-      module: "billing",
-      action: "read",
-    },
-    {
       prefix: OPERATIONS_ROUTES.PAYMENTS,
       module: "billing",
       action: "read",

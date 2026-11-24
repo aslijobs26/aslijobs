@@ -1,5 +1,5 @@
 import { Schema, model, type InferSchemaType, type Types } from "mongoose";
-import { PURCHASABLE_PLAN_CODES } from "../subscriptions/subscription.constants.js";
+import { SUBSCRIPTION_PLAN_CODES } from "../subscriptions/subscription.constants.js";
 
 export const PAYMENT_ORDER_STATUSES = [
   "created",
@@ -28,11 +28,19 @@ const paymentOrderSchema = new Schema(
     },
     /** Team member who started checkout (null → account owner). */
     initiatedByTeamMemberId: { type: Schema.Types.ObjectId, default: null },
-    planCode: { type: String, enum: PURCHASABLE_PLAN_CODES, required: true },
+    planCode: { type: String, enum: SUBSCRIPTION_PLAN_CODES, required: true },
+    planName: { type: String, trim: true, default: "" },
+    packageLabel: { type: String, trim: true, default: "" },
+    jobCredits: { type: Number, min: 1, default: null },
+    listingValidityDays: { type: Number, min: 1, default: null },
+    maxCities: { type: Number, min: 1, default: null },
     /** Total charged via Cashfree (base + GST), rupees. */
     amount: { type: Number, required: true, min: 1 },
     /** Plan price before tax. null on orders created before GST was added. */
+    planPrice: { type: Number, default: null },
     baseAmount: { type: Number, default: null },
+    discountPercent: { type: Number, min: 0, max: 100, default: 0 },
+    discountAmount: { type: Number, min: 0, default: 0 },
     gstRatePercent: { type: Number, default: 0 },
     gstAmount: { type: Number, default: 0 },
     currency: { type: String, required: true, default: "INR" },

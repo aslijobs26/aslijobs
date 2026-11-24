@@ -11,6 +11,7 @@ import { transliterateJobTitle } from "@/i18n/transliterate-job-title";
 import { useTranslate } from "@/i18n/translate";
 import type { PublicJobDetail } from "@/services/public-jobs.service";
 import { getPublicJobRecruiterDetails } from "@/utils/public-job-recruiter";
+import { formatJobLocationSet } from "@/utils/format-job-location-set";
 import {
   formatJobSearchEducation,
   formatJobSearchExperience,
@@ -368,7 +369,7 @@ export function JobSearchOverviewPanel({
     );
   }
 
-  const location = formatJobSearchLocation(
+  const location = formatJobLocationSet(job.locations) || formatJobSearchLocation(
     job.cityName,
     job.stateName,
     job.city,

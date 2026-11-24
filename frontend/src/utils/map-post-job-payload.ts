@@ -57,6 +57,15 @@ export function mapWizardDataToCreateJobPayload(
     stateName: resolveStateName(locationAndSalary.state),
     city: toLocationSlug(locationAndSalary.city) || locationAndSalary.city.trim(),
     cityName: resolveCityName(locationAndSalary.city),
+    locations: [
+      { state: locationAndSalary.state, city: locationAndSalary.city },
+      ...locationAndSalary.additionalLocations,
+    ].map(({ state, city }) => ({
+      state: toLocationSlug(state) || state.trim(),
+      stateName: resolveStateName(state),
+      city: toLocationSlug(city) || city.trim(),
+      cityName: resolveCityName(city),
+    })),
     address: locationAndSalary.address.trim(),
     landmark: locationAndSalary.landmark.trim(),
     salaryType: locationAndSalary.salaryType as CreateJobPayload["salaryType"],

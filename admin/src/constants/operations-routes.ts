@@ -28,7 +28,6 @@ export const OPERATIONS_ROUTES = {
   ROLES_NEW: "/operations/roles/new",
   ACTIVITY_LOG: "/operations/activity-log",
   SETTINGS: "/operations/settings",
-  SUBSCRIPTIONS: "/operations/subscriptions",
   PAYMENTS: "/operations/payments",
   BUSINESS_DEVELOPMENT: "/operations/business-development",
   PROMOTIONS_EVENTS: "/operations/promotions-events",

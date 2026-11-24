@@ -89,6 +89,12 @@ export function hasMeaningfulPostJobDraftContent(
     return true;
   }
 
+  if (locationAndSalary.additionalLocations.some((location) =>
+    location.state.trim() || location.city.trim(),
+  )) {
+    return true;
+  }
+
   if (locationAndSalary.perks.length > 0) {
     return true;
   }
@@ -205,6 +211,7 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
         locationAndSalary: {
           ...POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
           ...snapshot.locationAndSalary,
+          additionalLocations: snapshot.locationAndSalary.additionalLocations ?? [],
           salaryType:
             (snapshot.locationAndSalary
               .salaryType as PostJobWizardFormData["locationAndSalary"]["salaryType"]) ||
@@ -274,6 +281,10 @@ export function mapJobDetailToWizardState(job: EmployerJobDetail): {
         ...POST_JOB_INITIAL_WIZARD_DATA.locationAndSalary,
         state: source.stateName || source.state,
         city: source.cityName || source.city,
+        additionalLocations: (source.locations ?? []).slice(1).map((location) => ({
+          state: location.stateName || location.state,
+          city: location.cityName || location.city,
+        })),
         address: source.address,
         landmark: source.landmark,
         salaryType:

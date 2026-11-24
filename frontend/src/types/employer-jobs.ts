@@ -23,6 +23,7 @@ export type EmployerJobListItem = {
   vacancies: number;
   city: string;
   cityName: string;
+  locations?: Array<{ state: string; stateName: string; city: string; cityName: string }>;
   state: string;
   stateName: string;
   applications: number;
@@ -106,6 +107,7 @@ export type CreateJobPayload = {
   stateName: string;
   city: string;
   cityName: string;
+  locations?: Array<{ state: string; stateName: string; city: string; cityName: string }>;
   address: string;
   landmark: string;
   salaryType: "fixed" | "range";
@@ -154,6 +156,7 @@ export type PostJobWizardSnapshot = {
   locationAndSalary: {
     state: string;
     city: string;
+    additionalLocations?: Array<{ state: string; city: string }>;
     address: string;
     landmark: string;
     salaryType: string;
@@ -217,6 +220,7 @@ export type EmployerJobDetail = {
   stateName: string;
   city: string;
   cityName: string;
+  locations?: Array<{ state: string; stateName: string; city: string; cityName: string }>;
   address: string;
   landmark: string;
   salaryType: string;

@@ -146,7 +146,7 @@ const BASE_ITEMS: AttentionWorkItem[] = [
     status: "open",
     statusLabel: "Open",
     actionLabel: "Resolve",
-    actionHref: OPERATIONS_ROUTES.SUBSCRIPTIONS,
+    actionHref: OPERATIONS_ROUTES.PAYMENTS,
     tabs: ["high_priority"],
   },
   {

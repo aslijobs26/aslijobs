@@ -111,6 +111,7 @@ export const POST_JOB_INITIAL_FORM_DATA: PostJobFormData = {
 export const POST_JOB_INITIAL_LOCATION_SALARY_DATA: LocationAndSalaryFormData = {
   state: "",
   city: "",
+  additionalLocations: [],
   address: "",
   landmark: "",
   salaryType: "",

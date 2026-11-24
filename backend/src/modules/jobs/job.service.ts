@@ -157,6 +157,24 @@ function toObjectIdString(
   return value.toString();
 }
 
+function normalizedJobLocations(input: CreateJobInput) {
+  const locations = [
+    { state: input.state, stateName: input.stateName, city: input.city, cityName: input.cityName },
+    ...(input.locations ?? []),
+  ];
+  const seen = new Set<string>();
+  return locations.filter((location) => {
+    const key = buildJobCityKey(location);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function jobCityKeys(input: CreateJobInput): string[] {
+  return normalizedJobLocations(input).map(buildJobCityKey).filter(Boolean);
+}
+
 function toJobPublic(
   job: JobDocument,
   metrics?: EmployerJobApplicationMetrics,
@@ -185,6 +203,7 @@ function toJobPublic(
     stateName: job.stateName,
     city: job.city,
     cityName: job.cityName,
+    locations: job.locations?.length ? job.locations : [{ state: job.state, stateName: job.stateName, city: job.city, cityName: job.cityName }],
     address: job.address,
     landmark: job.landmark,
     salaryType: job.salaryType,
@@ -248,6 +267,7 @@ function toEmployerJobListItem(
     vacancies: job.vacancies,
     city: job.city,
     cityName: job.cityName,
+    locations: job.locations?.length ? job.locations : [{ state: job.state, stateName: job.stateName, city: job.city, cityName: job.cityName }],
     state: job.state,
     stateName: job.stateName,
     applications: applicationMetrics.applications,
@@ -319,6 +339,15 @@ function denormalizeDraftFields(snapshot: DraftWizardSnapshot) {
     stateName: locationAndSalary.state.trim(),
     city: toLocationSlug(locationAndSalary.city) || locationAndSalary.city.trim(),
     cityName: locationAndSalary.city.trim(),
+    locations: [
+      { state: toLocationSlug(locationAndSalary.state) || locationAndSalary.state.trim(), stateName: locationAndSalary.state.trim(), city: toLocationSlug(locationAndSalary.city) || locationAndSalary.city.trim(), cityName: locationAndSalary.city.trim() },
+      ...(locationAndSalary.additionalLocations ?? []).map((location) => ({
+        state: toLocationSlug(location.state) || location.state.trim(),
+        stateName: location.state.trim(),
+        city: toLocationSlug(location.city) || location.city.trim(),
+        cityName: location.city.trim(),
+      })),
+    ].filter((location) => location.state && location.stateName && location.city && location.cityName),
     address: locationAndSalary.address.trim(),
     landmark: locationAndSalary.landmark.trim(),
     salaryType: locationAndSalary.salaryType,
@@ -400,6 +429,7 @@ function applyCreateInputToJob(job: JobDocument, input: CreateJobInput) {
   job.stateName = input.stateName;
   job.city = input.city;
   job.cityName = input.cityName;
+  job.locations = normalizedJobLocations(input) as typeof job.locations;
   job.address = input.address;
   job.landmark = input.landmark;
   job.salaryType = input.salaryType;
@@ -463,6 +493,7 @@ export function toPendingLiveRevisionPayload(
     stateName: input.stateName,
     city: input.city,
     cityName: input.cityName,
+    locations: normalizedJobLocations(input),
     address: input.address,
     landmark: input.landmark,
     salaryType: input.salaryType,
@@ -530,6 +561,7 @@ function liveJobMatchesCreateInput(
     stateName: job.stateName ?? "",
     city: job.city ?? "",
     cityName: job.cityName ?? "",
+    locations: job.locations?.length ? job.locations : [{ state: job.state ?? "", stateName: job.stateName ?? "", city: job.city ?? "", cityName: job.cityName ?? "" }],
     address: job.address ?? "",
     landmark: job.landmark ?? "",
     salaryType: (job.salaryType || "fixed") as CreateJobInput["salaryType"],
@@ -867,13 +899,13 @@ function buildEmployerJobsAdvancedFilter(query: ListEmployerJobsQuery) {
   }
 
   if (query.city.length === 1) {
-    andClauses.push({ city: query.city[0] });
+    andClauses.push({ $or: [{ city: query.city[0] }, { "locations.city": query.city[0] }] });
   } else if (query.city.length > 1) {
-    andClauses.push({ city: { $in: query.city } });
+    andClauses.push({ $or: [{ city: { $in: query.city } }, { "locations.city": { $in: query.city } }] });
   }
 
   if (query.state) {
-    andClauses.push({ state: query.state });
+    andClauses.push({ $or: [{ state: query.state }, { "locations.state": query.state }] });
   }
 
   if (query.businessCategory.length > 0) {
@@ -1026,6 +1058,9 @@ function buildNormalizedLocationFilter(
       { [slugField]: { $in: normalized } },
       { [slugField]: { $in: nameRegexes } },
       { [nameField]: { $in: nameRegexes } },
+      { [`locations.${slugField}`]: { $in: normalized } },
+      { [`locations.${slugField}`]: { $in: nameRegexes } },
+      { [`locations.${nameField}`]: { $in: nameRegexes } },
     ],
   };
 }
@@ -1060,6 +1095,20 @@ function buildExactSelectedCityMatchExpr(citySlugs: readonly string[]) {
     $or: [
       { $in: [locationTokenExpr("$city"), normalized] },
       { $in: [locationTokenExpr("$cityName"), normalized] },
+      {
+        $anyElementTrue: {
+          $map: {
+            input: { $ifNull: ["$locations", []] },
+            as: "location",
+            in: {
+              $or: [
+                { $in: [locationTokenExpr("$$location.city"), normalized] },
+                { $in: [locationTokenExpr("$$location.cityName"), normalized] },
+              ],
+            },
+          },
+        },
+      },
     ],
   };
 }
@@ -1235,6 +1284,7 @@ function toPublicJobListItem(
     stateName: String(job.stateName ?? ""),
     city: String(job.city ?? ""),
     cityName: String(job.cityName ?? ""),
+    locations: Array.isArray(job.locations) ? job.locations : [{ state: String(job.state ?? ""), stateName: String(job.stateName ?? ""), city: String(job.city ?? ""), cityName: String(job.cityName ?? "") }],
     salaryType: job.salaryType as JobDocument["salaryType"],
     salaryPeriod: normalizeSalaryPeriod(job.salaryPeriod),
     fixedSalary:
@@ -1415,6 +1465,7 @@ export class JobService {
           employerId: employerObjectId,
           jobId: jobObjectId,
           cityKey: buildJobCityKey(input),
+          cityKeys: jobCityKeys(input),
           onBlocked: async (): Promise<CreditErrorExtras> => {
             const draftResult: { job: { id: string; jobId: string } } =
               await this.createJob(employerId, {
@@ -1459,6 +1510,7 @@ export class JobService {
       stateName: input.stateName,
       city: input.city,
       cityName: input.cityName,
+      locations: normalizedJobLocations(input),
       address: input.address,
       landmark: input.landmark,
       salaryType: input.salaryType,
@@ -1808,6 +1860,7 @@ export class JobService {
         employerId,
         jobId: job._id,
         cityKey: buildJobCityKey(job),
+        cityKeys: (job.locations?.length ? job.locations : [job]).map(buildJobCityKey).filter(Boolean),
       });
     }
 
@@ -2271,6 +2324,7 @@ export class JobService {
         grantId: job.subscriptionGrantId,
         jobId: job._id,
         cityKey,
+        cityKeys: jobCityKeys(input),
       });
       if (!cityAllowed) {
         throw subscriptionEntitlementService.buildCityLimitError(
@@ -2282,6 +2336,7 @@ export class JobService {
         employerId,
         jobId: job._id,
         cityKey,
+        cityKeys: jobCityKeys(input),
         onBlocked: saveFormForCreditError,
       });
       if (credit.grantId) {
@@ -2392,6 +2447,7 @@ export class JobService {
         grantId: job.subscriptionGrantId,
         jobId: job._id,
         cityKey: buildJobCityKey(input),
+        cityKeys: jobCityKeys(input),
       });
       if (!cityAllowed) {
         throw subscriptionEntitlementService.buildCityLimitError();
@@ -2817,6 +2873,7 @@ export class JobService {
           stateName: 1,
           city: 1,
           cityName: 1,
+          locations: 1,
           salaryType: 1,
           salaryPeriod: 1,
           fixedSalary: 1,
@@ -2851,11 +2908,24 @@ export class JobService {
       }>([
         { $match: facetFilter },
         {
-          $group: {
-            _id: { city: "$city", cityName: "$cityName" },
-            count: { $sum: 1 },
+          $set: {
+            facetLocations: {
+              $cond: [
+                { $gt: [{ $size: { $ifNull: ["$locations", []] } }, 0] },
+                "$locations",
+                [{ city: "$city", cityName: "$cityName" }],
+              ],
+            },
           },
         },
+        { $unwind: "$facetLocations" },
+        {
+          $group: {
+            _id: { city: "$facetLocations.city", cityName: "$facetLocations.cityName" },
+            jobIds: { $addToSet: "$_id" },
+          },
+        },
+        { $set: { count: { $size: "$jobIds" } } },
         { $sort: { count: -1 } },
         { $limit: cityFacetLimit },
       ]),

@@ -28,6 +28,7 @@ export type PublicJobListItem = {
   stateName: string;
   city: string;
   cityName: string;
+  locations?: Array<{ state: string; stateName: string; city: string; cityName: string }>;
   salaryType: "fixed" | "range";
   salaryPeriod?: "per-month" | "per-year";
   fixedSalary: number | null;

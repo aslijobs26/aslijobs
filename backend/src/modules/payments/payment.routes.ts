@@ -1,5 +1,6 @@
 import { Router } from "express";
 import rateLimit from "express-rate-limit";
+import { z } from "zod";
 import { requireEmployerAuth } from "../../middleware/auth.middleware.js";
 import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
@@ -28,11 +29,17 @@ const createOrderRateLimit = rateLimit({
   message: { success: false, message: "Too many payment attempts. Please wait and try again." },
 });
 
+const publicPaymentLinkRateLimit = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
+const paymentLinkTokenParamsSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{40,60}$/) });
+
 paymentRouter.post(
   "/webhooks/cashfree",
   cashfreeWebhookRateLimit,
   asyncHandler(paymentController.cashfreeWebhook),
 );
+
+paymentRouter.get("/links/:token", publicPaymentLinkRateLimit, validate(paymentLinkTokenParamsSchema, "params"), asyncHandler(paymentController.getPublicPaymentLink));
+paymentRouter.post("/links/:token/verify", publicPaymentLinkRateLimit, validate(paymentLinkTokenParamsSchema, "params"), asyncHandler(paymentController.verifyPublicPaymentLink));
 
 paymentRouter.post(
   "/orders",

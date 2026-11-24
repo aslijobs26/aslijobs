@@ -140,6 +140,15 @@ const jobSchema = new Schema(
       trim: true,
       default: "",
     },
+    locations: {
+      type: [{
+        state: { type: String, trim: true, required: true },
+        stateName: { type: String, trim: true, required: true },
+        city: { type: String, trim: true, required: true },
+        cityName: { type: String, trim: true, required: true },
+      }],
+      default: [],
+    },
     address: {
       type: String,
       trim: true,
@@ -580,6 +589,7 @@ jobSchema.index(
 /** Period hiring analytics group jobs by employer without a status predicate. */
 jobSchema.index({ createdAt: -1, employerId: 1 });
 jobSchema.index({ status: 1, stateName: 1, cityName: 1, createdAt: -1 });
+jobSchema.index({ status: 1, "locations.state": 1, "locations.city": 1 });
 /** Public Jobs listing default sort: active → publishedAt/createdAt. */
 jobSchema.index({ status: 1, publishedAt: -1, createdAt: -1 });
 /** Homepage map counts group active jobs by state and city slug. */
@@ -589,6 +599,8 @@ jobSchema.index({
   jobId: "text",
   cityName: "text",
   stateName: "text",
+  "locations.cityName": "text",
+  "locations.stateName": "text",
   address: "text",
 });
 
