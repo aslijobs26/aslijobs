@@ -12,15 +12,6 @@ import {
 
 const paymentRouter = Router();
 
-/** Webhook path is exempt from the global limiter (see app.ts); bound it here. */
-const cashfreeWebhookRateLimit = rateLimit({
-  windowMs: 60 * 1000,
-  max: 300,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { success: false, message: "Too many requests" },
-});
-
 const createOrderRateLimit = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 20,
@@ -31,12 +22,6 @@ const createOrderRateLimit = rateLimit({
 
 const publicPaymentLinkRateLimit = rateLimit({ windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 const paymentLinkTokenParamsSchema = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{40,60}$/) });
-
-paymentRouter.post(
-  "/webhooks/cashfree",
-  cashfreeWebhookRateLimit,
-  asyncHandler(paymentController.cashfreeWebhook),
-);
 
 paymentRouter.get("/links/:token", publicPaymentLinkRateLimit, validate(paymentLinkTokenParamsSchema, "params"), asyncHandler(paymentController.getPublicPaymentLink));
 paymentRouter.post("/links/:token/verify", publicPaymentLinkRateLimit, validate(paymentLinkTokenParamsSchema, "params"), asyncHandler(paymentController.verifyPublicPaymentLink));

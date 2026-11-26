@@ -405,27 +405,12 @@ const envSchema = z.object({
   /**
    * Cashfree Payment Gateway. `sandbox` uses sandbox.cashfree.com.
    * Keys come from the Cashfree merchant dashboard (Developers → API keys).
-   * The secret key also signs webhooks. Never expose it to clients.
+   * Never expose the secret key to clients.
    */
   CASHFREE_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
   CASHFREE_APP_ID: z.string().trim().optional().default(""),
   CASHFREE_SECRET_KEY: z.string().trim().optional().default(""),
   CASHFREE_API_VERSION: z.string().trim().default("2025-01-01"),
-  /**
-   * Public HTTPS origin Cashfree can reach for webhooks (no trailing slash).
-   * Local: your ngrok static domain forwarding to port 5000.
-   * Empty → derived from PUBLIC_API_URL.
-   */
-  CASHFREE_WEBHOOK_BASE_URL: z
-    .string()
-    .trim()
-    .optional()
-    .default("")
-    .transform((value) => value.replace(/\/+$/, ""))
-    .refine((value) => value === "" || /^https:\/\/[^\s/]+$/.test(value), {
-      message:
-        "must be an https origin with no spaces or path, e.g. https://your-name.ngrok-free.dev",
-    }),
   /**
    * Where Cashfree sends the browser after checkout. `{order_id}` is
    * replaced by Cashfree. Empty → FRONTEND_URL/employer/payments/status?order_id={order_id}

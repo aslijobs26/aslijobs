@@ -551,6 +551,7 @@ describe("draft save arms the incomplete reminder", () => {
         locationAndSalary: {
           state: "",
           city: "",
+          additionalLocations: [],
           address: "",
           landmark: "",
           salaryType: "",
@@ -636,6 +637,7 @@ describe("draft save arms the incomplete reminder", () => {
           locationAndSalary: {
             state: "",
             city: "",
+            additionalLocations: [],
             address: "",
             landmark: "",
             salaryType: "",

@@ -53,8 +53,6 @@ export type CreateCashfreeOrderInput = {
     email?: string;
   };
   returnUrl: string;
-  /** Omitted when empty; the dashboard-configured webhook applies instead. */
-  notifyUrl?: string | null;
   expiresAt: Date;
   note?: string;
   tags?: Record<string, string>;
@@ -157,7 +155,6 @@ export const cashfreeClient = {
         },
         order_meta: {
           return_url: input.returnUrl,
-          ...(input.notifyUrl ? { notify_url: input.notifyUrl } : {}),
         },
         order_expiry_time: input.expiresAt.toISOString(),
         ...(input.note ? { order_note: input.note } : {}),

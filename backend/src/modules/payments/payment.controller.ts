@@ -14,11 +14,6 @@ function requireEmployerId(req: Request): string {
   return employerId;
 }
 
-function headerValue(req: Request, name: string): string | undefined {
-  const value = req.headers[name];
-  return Array.isArray(value) ? value[0] : value;
-}
-
 export const paymentController = {
   createOrder: async (req: Request, res: Response): Promise<void> => {
     const employerId = requireEmployerId(req);
@@ -68,15 +63,6 @@ export const paymentController = {
     });
   },
 
-  cashfreeWebhook: async (req: Request, res: Response): Promise<void> => {
-    const result = await paymentService.handleCashfreeWebhook({
-      rawBody: (req as Request & { rawBody?: Buffer }).rawBody,
-      signature: headerValue(req, "x-webhook-signature"),
-      timestamp: headerValue(req, "x-webhook-timestamp"),
-      body: req.body,
-    });
-    res.status(HTTP_STATUS.OK).json({ success: true, data: result });
-  },
   getPublicPaymentLink: async (req: Request, res: Response): Promise<void> => {
     sendSuccess(res, HTTP_STATUS.OK, { data: await paymentLinkService.getPublic(String(req.params.token)) });
   },

@@ -58,6 +58,7 @@ function submittedJobInput(status: "draft" | "active" = "active"): CreateJobInpu
     stateName: "Telangana",
     city: "hyderabad",
     cityName: "Hyderabad",
+    locations: [],
     address: "1 Road",
     landmark: "",
     salaryType: "fixed",

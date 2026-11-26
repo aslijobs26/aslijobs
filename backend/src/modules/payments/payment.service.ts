@@ -17,15 +17,10 @@ import {
   type CashfreePayment,
 } from "./cashfree.client.js";
 import {
-  hashWebhookPayload,
-  verifyCashfreeWebhookSignature,
-} from "./cashfree-webhook.signature.js";
-import {
   PaymentOrderModel,
   type PaymentOrderLean,
   type PaymentOrderStatus,
 } from "./payment-order.model.js";
-import { PaymentWebhookEventModel } from "./payment-webhook-event.model.js";
 import { buildPaymentInvoicePdf } from "./payment-invoice-pdf.js";
 import { resolveSubscriptionPlans } from "../subscriptions/subscription-plan.service.js";
 
@@ -35,8 +30,6 @@ const REUSE_SESSION_MIN_REMAINING_MS = 5 * MS_PER_MINUTE;
 const RECONCILE_STALE_AFTER_MS = 15 * MS_PER_MINUTE;
 const RECONCILE_RECHECK_EVERY_MS = 10 * MS_PER_MINUTE;
 const RECONCILE_BATCH_LIMIT = 50;
-
-export const CASHFREE_WEBHOOK_PATH = "/payments/webhooks/cashfree";
 
 export type OrderTransition =
   | { kind: "paid"; payment: CashfreePayment | null }
@@ -109,15 +102,6 @@ export function generateMerchantOrderId(now: Date = new Date()): string {
     .randomBytes(5)
     .toString("hex")
     .toUpperCase()}`;
-}
-
-export function resolveCashfreeNotifyUrl(): string | null {
-  const base = env.CASHFREE_WEBHOOK_BASE_URL
-    ? `${env.CASHFREE_WEBHOOK_BASE_URL}/api/v1`
-    : env.PUBLIC_API_URL;
-  const url = `${base}${CASHFREE_WEBHOOK_PATH}`;
-  // Cashfree only delivers to HTTPS endpoints.
-  return url.startsWith("https://") ? url : null;
 }
 
 export function resolveCashfreeReturnUrl(): string {
@@ -266,6 +250,7 @@ export const paymentService = {
         paymentSessionId: reusable.paymentSessionId,
         environment: reusable.environment,
         planCode: reusable.planCode,
+        planName: reusable.planName || plan.name,
         amount: reusable.amount,
         planPrice: reusable.planPrice ?? plan.priceInr,
         discountPercent: reusable.discountPercent ?? 0,
@@ -302,13 +287,6 @@ export const paymentService = {
       environment: env.CASHFREE_ENV,
     });
 
-    const notifyUrl = resolveCashfreeNotifyUrl();
-    if (!notifyUrl) {
-      console.warn(
-        "[payments] notify_url omitted: set CASHFREE_WEBHOOK_BASE_URL to an https origin (e.g. your ngrok domain). Dashboard webhooks still apply.",
-      );
-    }
-
     let cfOrder: CashfreeOrder;
     try {
       cfOrder = await cashfreeClient.createOrder({
@@ -322,7 +300,6 @@ export const paymentService = {
           email: employer.emailAddress || undefined,
         },
         returnUrl: input.returnUrl || resolveCashfreeReturnUrl(),
-        notifyUrl,
         expiresAt,
         note: `AsliJobs ${plan.name} plan (incl. ${tax.gstRatePercent}% GST)`,
         tags: { planCode: plan.code, employerId: employerObjectId.toString() },
@@ -358,6 +335,7 @@ export const paymentService = {
       paymentSessionId: cfOrder.payment_session_id,
       environment: env.CASHFREE_ENV,
       planCode: plan.code,
+      planName: plan.name,
       amount,
       planPrice: plan.priceInr,
       discountPercent,
@@ -482,7 +460,7 @@ export const paymentService = {
 
   /**
    * Single source of truth for order state. Always asks Cashfree directly;
-   * webhooks, the return-page verify call, and the sweep all land here.
+   * the return-page verify call and periodic sweep both use this path.
    */
   async reconcileOrder(orderId: string) {
     const order = (await PaymentOrderModel.findOne({ orderId }).lean()) as PaymentOrderLean | null;
@@ -592,108 +570,7 @@ export const paymentService = {
     return toPublicOrder(updated);
   },
 
-  /**
-   * Verifies and processes a Cashfree webhook. Throws 401 on a bad signature.
-   * Any other thrown error → 500, so Cashfree retries delivery.
-   */
-  async handleCashfreeWebhook(input: {
-    rawBody: Buffer | undefined;
-    signature: string | undefined;
-    timestamp: string | undefined;
-    body: unknown;
-  }): Promise<{ processed: boolean; duplicate?: boolean; ignored?: string }> {
-    const valid = verifyCashfreeWebhookSignature({
-      signature: input.signature,
-      timestamp: input.timestamp,
-      rawBody: input.rawBody,
-      secretKey: env.CASHFREE_SECRET_KEY,
-    });
-    if (!valid || !input.rawBody) {
-      console.warn("[payments] rejected Cashfree webhook: invalid signature");
-      throw new AppError("Invalid signature", HTTP_STATUS.UNAUTHORIZED);
-    }
-
-    const body = (input.body ?? {}) as {
-      type?: string;
-      data?: {
-        order?: { order_id?: string };
-        payment?: { cf_payment_id?: string | number; payment_message?: string };
-      };
-    };
-    const eventType = String(body.type ?? "");
-    const orderId = String(body.data?.order?.order_id ?? "");
-    const cfPaymentId = String(body.data?.payment?.cf_payment_id ?? "");
-    const payloadHash = hashWebhookPayload(input.rawBody);
-
-    const event = await PaymentWebhookEventModel.findOneAndUpdate(
-      { payloadHash },
-      {
-        $setOnInsert: {
-          provider: "cashfree",
-          eventType,
-          orderId,
-          cfPaymentId,
-          payloadHash,
-          payload: input.body ?? null,
-        },
-        $inc: { attempts: 1 },
-      },
-      { upsert: true, new: true },
-    );
-    if (event.processedAt) {
-      return { processed: true, duplicate: true };
-    }
-
-    try {
-      const order = orderId
-        ? await PaymentOrderModel.findOne({ orderId }).select("_id status").lean()
-        : null;
-
-      let ignored: string | undefined;
-      if (!order) {
-        // Dashboard "test webhook" deliveries and other merchants' orders land here.
-        ignored = "unknown_order";
-      } else if (eventType === "PAYMENT_SUCCESS_WEBHOOK") {
-        await this.reconcileOrder(orderId);
-      } else if (
-        eventType === "PAYMENT_FAILED_WEBHOOK" ||
-        eventType === "PAYMENT_USER_DROPPED_WEBHOOK"
-      ) {
-        const now = new Date();
-        await PaymentOrderModel.updateOne(
-          { orderId, status: { $in: ["created", "failed", "user_dropped"] } },
-          {
-            $set: {
-              status: eventType === "PAYMENT_FAILED_WEBHOOK" ? "failed" : "user_dropped",
-              failedAt: now,
-              failureReason: String(body.data?.payment?.payment_message ?? ""),
-              cfPaymentId,
-            },
-          },
-        );
-      } else {
-        ignored = "unhandled_event_type";
-      }
-
-      await PaymentWebhookEventModel.updateOne(
-        { _id: event._id },
-        { $set: { processedAt: new Date(), processingError: ignored ?? "" } },
-      );
-      return { processed: true, ...(ignored ? { ignored } : {}) };
-    } catch (error) {
-      await PaymentWebhookEventModel.updateOne(
-        { _id: event._id },
-        {
-          $set: {
-            processingError: error instanceof Error ? error.message.slice(0, 500) : "unknown",
-          },
-        },
-      );
-      throw error;
-    }
-  },
-
-  /** Catches missed webhooks and half-finished grants. Run by the sweep. */
+  /** Reconciles pending API orders and half-finished grants. Run by the sweep. */
   async reconcileStaleOrders(now: Date = new Date()): Promise<number> {
     const candidates = await PaymentOrderModel.find({
       $or: [
