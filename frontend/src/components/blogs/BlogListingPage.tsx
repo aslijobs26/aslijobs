@@ -18,7 +18,7 @@ import {
 } from "@/services/blogs.service";
 import { formatReadingTime } from "@/utils/blog-format";
 import { cn } from "@/utils/cn";
-import { ChevronLeft, ChevronRight, Clock3, Mail, Search } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight, Clock3, Mail, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -234,9 +234,9 @@ export function BlogListingPage() {
       ) : null}
 
       {!loading && !error && !filtered && lead ? (
-        <div className="mt-10 grid gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1fr)_240px]">
+        <div className="mt-12 grid items-start gap-y-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-x-8 xl:gap-x-10">
           <div className="flex items-center justify-between gap-4 lg:col-start-1 lg:row-start-1">
-            <h2 id="latest-insights" className="text-lg font-bold text-[#1c2430]">
+            <h2 id="latest-insights" className="text-xl font-bold tracking-tight text-[#1c2430] sm:text-2xl">
               Latest Insights & Articles
             </h2>
             <div className="flex items-center gap-2">
@@ -245,7 +245,7 @@ export function BlogListingPage() {
                 aria-label="Previous articles"
                 disabled={latestPool.length < 2}
                 onClick={() => setLatestIndex((index) => (index - 1 + latestPool.length) % latestPool.length)}
-                className="inline-flex size-10 items-center justify-center rounded-full border border-border-subtle bg-surface text-foreground shadow-sm transition-[scale,border-color,background-color,color,box-shadow] hover:border-primary/40 hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary active:bg-primary-light active:text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-10 items-center justify-center rounded-full border border-border-subtle bg-white text-foreground shadow-sm transition-[scale,border-color,background-color,color,box-shadow] hover:border-primary/40 hover:bg-primary-light hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary active:bg-primary-light active:text-primary disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
               </button>
@@ -254,7 +254,7 @@ export function BlogListingPage() {
                 aria-label="Next articles"
                 disabled={latestPool.length < 2}
                 onClick={() => setLatestIndex((index) => (index + 1) % latestPool.length)}
-                className="inline-flex size-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-sm transition-[scale,border-color,background-color,box-shadow] hover:border-primary-hover hover:bg-primary-hover hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary-hover active:bg-primary-hover disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-10 items-center justify-center rounded-full border border-primary bg-primary text-white shadow-md shadow-primary/20 transition-[scale,border-color,background-color,box-shadow] hover:border-primary-hover hover:bg-primary-hover hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 active:scale-95 active:border-primary-hover active:bg-primary-hover disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ChevronRight className="size-4" aria-hidden="true" />
               </button>
@@ -262,26 +262,9 @@ export function BlogListingPage() {
           </div>
           <div className="lg:col-start-1 lg:row-start-2">
             <section aria-labelledby="latest-insights">
-              <div className="grid items-start gap-x-6 gap-y-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
+              <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] xl:gap-6">
                 {feature ? (
-                  <div className="min-w-0">
-                    <Link href={ROUTES.blog(feature.slug)} className="block overflow-hidden rounded-xl bg-primary-light">
-                      {feature.coverImageUrl ? (
-                        <img src={feature.coverImageUrl} alt={feature.coverImageAlt || feature.title} className="aspect-[2/1] w-full object-cover" />
-                      ) : (
-                        <span className="block aspect-[2/1]" />
-                      )}
-                    </Link>
-                    <div className="mt-3">
-                      <ReadingTime minutes={feature.readingTimeMinutes} />
-                      <h3 className="mt-1.5 text-lg font-bold leading-snug text-[#1c2430]">
-                        <Link href={ROUTES.blog(feature.slug)} className="hover:text-primary">
-                          {feature.title}
-                        </Link>
-                      </h3>
-                      {feature.excerpt ? <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-[#6b7780]">{feature.excerpt}</p> : null}
-                    </div>
-                  </div>
+                  <CategoryLeadCard blog={feature} />
                 ) : null}
                 <div className="grid content-start gap-5">
                   {sideCards.map((blog) => (
@@ -291,26 +274,40 @@ export function BlogListingPage() {
               </div>
             </section>
             {sections.map((section) => (
-              <section key={section.title} className="mt-12">
-                <h2 className="text-lg font-bold text-[#1c2430]">{section.title}</h2>
-                <div className="mt-4 grid items-center gap-x-6 gap-y-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
-                  <div className="grid content-start gap-5">
+              <section key={section.title} className="mt-12 border-t border-[#e4ebe8] pt-8">
+                <header className="mb-5 flex items-center justify-between gap-3">
+                  <h2 className="text-xl font-bold tracking-tight text-[#1c2430]">{section.title}</h2>
+                  <span className="shrink-0 rounded-full bg-primary-light px-3 py-1 text-[11px] font-semibold text-primary">
+                    {section.items.length} {section.items.length === 1 ? "article" : "articles"}
+                  </span>
+                </header>
+                <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)] xl:gap-6">
+                  {section.items[0] ? (
+                    <div className="order-1 min-w-0 lg:order-2">
+                      <CategoryLeadCard blog={section.items[0]} />
+                    </div>
+                  ) : null}
+                  <div className="order-2 grid content-start gap-5 lg:order-1">
                     {section.items.slice(1, 3).map((blog) => (
                       <CategoryStackCard key={blog.id} blog={blog} large />
                     ))}
                   </div>
-                  {section.items[0] ? <CategoryLeadCard blog={section.items[0]} /> : null}
                 </div>
               </section>
             ))}
           </div>
-          <form onSubmit={subscribe} className="flex flex-col self-start rounded-2xl bg-primary-light px-4 py-5 lg:col-start-2 lg:row-start-2">
-            <span className="inline-flex size-9 items-center justify-center rounded-full bg-white text-primary">
-              <Mail className="size-4" aria-hidden="true" />
+          <form
+            onSubmit={subscribe}
+            className="relative isolate flex flex-col self-start overflow-hidden rounded-3xl border border-primary/15 bg-gradient-to-br from-primary-light via-white to-primary/[0.08] px-5 py-6 shadow-[0_16px_40px_rgba(15,23,42,0.08)] lg:sticky lg:top-24 lg:col-start-2 lg:row-start-2"
+          >
+            <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 -z-10 size-40 rounded-full bg-primary/15 blur-3xl" />
+            <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-primary/10 bg-white text-primary shadow-sm">
+              <Mail className="size-5" aria-hidden="true" />
             </span>
-            <p className="mt-3 text-[15px] font-bold leading-snug text-[#1c2430]">Stay Updated with the Latest Insights</p>
+            <p className="mt-4 text-lg font-bold leading-snug tracking-tight text-[#1c2430]">Stay Updated with the Latest Insights</p>
+            <p className="mt-2 text-sm leading-relaxed text-[#6b7780]">Get fresh career guidance and hiring insights in your inbox.</p>
             {subscribed ? (
-              <p className="mt-4 text-sm text-foreground">Thanks. You are on the list.</p>
+              <p className="mt-4 rounded-xl border border-[#bbf7d0] bg-[#f0fdf4] px-3 py-2.5 text-sm font-medium text-[#166534]">Thanks. You are on the list.</p>
             ) : (
               <>
                 <label className="sr-only" htmlFor="blog-newsletter">
@@ -323,18 +320,18 @@ export function BlogListingPage() {
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
                   placeholder="Enter Email"
-                  className="mt-4 w-full rounded-lg border border-white bg-white px-3 py-2.5 text-sm outline-none ring-primary/30 placeholder:text-[#9aa6b2] focus:ring-2"
+                  className="mt-5 h-11 w-full rounded-xl border border-border-subtle bg-white px-3.5 text-sm outline-none ring-primary/30 placeholder:text-[#9aa6b2] transition-shadow focus:ring-2"
                 />
                 <button
                   type="submit"
-                  className="mt-3 h-10 w-full rounded-lg bg-primary text-sm font-semibold text-white hover:bg-primary-hover"
+                  className="mt-3 h-11 w-full rounded-xl bg-primary text-sm font-bold text-white shadow-md shadow-primary/20 transition-[transform,background-color,box-shadow] hover:-translate-y-0.5 hover:bg-primary-hover hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2"
                 >
                   Subscribe Now
                 </button>
               </>
             )}
-            <div className="mt-4">
-              <p className="text-xs font-medium leading-snug text-[#3d4750]">Stay Upto date with Aslijobs</p>
+            <div className="mt-5 border-t border-primary/10 pt-4">
+              <p className="text-xs font-semibold leading-snug text-[#3d4750]">Follow AsliJobs</p>
               <div className="mt-2 flex items-center gap-2">
                 {sidebarSocials.map((link) => (
                   <a
@@ -398,19 +395,19 @@ function CategoryStackCard({ blog, large = false }: { blog: BlogCard; large?: bo
     <Link
       href={ROUTES.blog(blog.slug)}
       className={cn(
-        "group flex min-w-0 items-start gap-3.5 rounded-xl border border-[#e4ebe8] bg-white p-2.5 shadow-sm",
+        "group flex min-w-0 items-start gap-3.5 rounded-2xl border border-[#e4ebe8] bg-white p-3 shadow-[0_4px_18px_rgba(15,23,42,0.04)] transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_12px_28px_rgba(15,23,42,0.09)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
       )}
     >
-      <span className={cn("shrink-0 overflow-hidden rounded-lg bg-primary-light", large ? "size-32" : "size-36")}>
-        {blog.coverImageUrl ? <img src={blog.coverImageUrl} alt="" className="size-full object-cover" /> : null}
+      <span className={cn("relative shrink-0 overflow-hidden rounded-xl bg-primary-light", large ? "size-24 sm:size-28" : "size-24 sm:size-32")}>
+        {blog.coverImageUrl ? <img src={blog.coverImageUrl} alt="" className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" /> : null}
       </span>
-      <span className="min-w-0">
+      <span className="min-w-0 pt-0.5">
         <ReadingTime minutes={blog.readingTimeMinutes} />
-        <span className={cn("mt-1 line-clamp-2 font-bold leading-snug text-[#1c2430] group-hover:text-primary", large ? "text-[15px]" : "text-base")}>
+        <span className={cn("mt-1.5 line-clamp-2 font-bold leading-snug text-[#1c2430] transition-colors group-hover:text-primary", large ? "text-[15px]" : "text-base")}>
           {blog.title}
         </span>
         {blog.excerpt ? (
-          <span className={cn("mt-1 line-clamp-2 leading-relaxed text-[#6b7780]", large ? "text-[13px]" : "text-sm")}>{blog.excerpt}</span>
+          <span className={cn("mt-1.5 line-clamp-2 leading-relaxed text-[#6b7780]", large ? "text-[13px]" : "text-sm")}>{blog.excerpt}</span>
         ) : null}
       </span>
     </Link>
@@ -419,24 +416,41 @@ function CategoryStackCard({ blog, large = false }: { blog: BlogCard; large?: bo
 
 function CategoryLeadCard({ blog }: { blog: BlogCard }) {
   return (
-    <div className="min-w-0">
-      <Link href={ROUTES.blog(blog.slug)} className="block overflow-hidden rounded-xl bg-primary-light">
+    <article className="group min-w-0 overflow-hidden rounded-3xl border border-[#e4ebe8] bg-white shadow-[0_6px_24px_rgba(15,23,42,0.06)] transition-[transform,border-color,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-[0_16px_36px_rgba(15,23,42,0.11)]">
+      <Link
+        href={ROUTES.blog(blog.slug)}
+        className="relative block aspect-[2/1] overflow-hidden bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/50"
+      >
         {blog.coverImageUrl ? (
-          <img src={blog.coverImageUrl} alt={blog.coverImageAlt || blog.title} className="aspect-[2/1] w-full object-cover" />
+          <img src={blog.coverImageUrl} alt={blog.coverImageAlt || blog.title} className="size-full object-cover transition-transform duration-500 group-hover:scale-[1.04]" />
         ) : (
-          <span className="block aspect-[2/1]" />
+          <span className="block size-full" />
         )}
       </Link>
-      <div className="mt-3">
-        <ReadingTime minutes={blog.readingTimeMinutes} />
-        <h3 className="mt-1.5 text-lg font-bold leading-snug text-[#1c2430]">
-          <Link href={ROUTES.blog(blog.slug)} className="hover:text-primary">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <ReadingTime minutes={blog.readingTimeMinutes} />
+          {blog.category?.name ? (
+            <span className="max-w-[55%] truncate rounded-full bg-primary-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-primary">
+              {blog.category.name}
+            </span>
+          ) : null}
+        </div>
+        <h3 className="mt-2.5 text-lg font-bold leading-snug tracking-tight text-[#1c2430] sm:text-xl">
+          <Link href={ROUTES.blog(blog.slug)} className="transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
             {blog.title}
           </Link>
         </h3>
-        {blog.excerpt ? <p className="mt-1.5 line-clamp-3 text-sm leading-relaxed text-[#6b7780]">{blog.excerpt}</p> : null}
+        {blog.excerpt ? <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[#6b7780]">{blog.excerpt}</p> : null}
+        <Link
+          href={ROUTES.blog(blog.slug)}
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-bold text-primary transition-[gap,color] hover:gap-2.5 hover:text-primary-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+        >
+          Read article
+          <ArrowRight className="size-4" aria-hidden="true" />
+        </Link>
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -467,13 +481,15 @@ function FilterChip({
 
 function ListingSkeleton() {
   return (
-    <div className="mt-10 grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)_240px]">
-      <div className="aspect-[16/10] animate-pulse rounded-xl bg-primary-light" />
-      <div className="grid gap-4">
-        <div className="h-20 animate-pulse rounded-xl bg-primary-light" />
-        <div className="h-20 animate-pulse rounded-xl bg-primary-light" />
+    <div className="mt-12 grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className="grid gap-5 sm:grid-cols-2">
+        <div className="aspect-[16/10] animate-pulse rounded-3xl bg-primary-light" />
+        <div className="grid content-start gap-4">
+          <div className="h-32 animate-pulse rounded-2xl bg-primary-light" />
+          <div className="h-32 animate-pulse rounded-2xl bg-primary-light" />
+        </div>
       </div>
-      <div className="h-56 animate-pulse rounded-2xl bg-primary-light" />
+      <div className="h-64 animate-pulse rounded-3xl bg-primary-light" />
     </div>
   );
 }

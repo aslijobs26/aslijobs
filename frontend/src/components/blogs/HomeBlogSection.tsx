@@ -17,7 +17,7 @@ function uploadedVideoMimeType(video: PublicVideo): string | undefined {
   return undefined;
 }
 
-function HomeVideoStrip({ videos, title }: { videos: PublicVideo[]; title: string }) {
+function HomeVideoStrip({ videos, title, tagline }: { videos: PublicVideo[]; title: string; tagline: string }) {
   const [active, setActive] = useState<PublicVideo | null>(null);
   const [playbackError, setPlaybackError] = useState(false);
   const [failedPreviewIds, setFailedPreviewIds] = useState<Set<string>>(() => new Set());
@@ -46,12 +46,15 @@ function HomeVideoStrip({ videos, title }: { videos: PublicVideo[]; title: strin
 
   return (
     <>
-      <h3
-        id="home-blog-videos"
-        className="discovery-section-title mt-10 min-w-0 text-pretty break-words text-lg font-bold leading-snug text-foreground"
-      >
-        {title}
-      </h3>
+      <div className="mt-10">
+        <h3
+          id="home-blog-videos"
+          className="discovery-section-title min-w-0 text-pretty break-words text-lg font-bold leading-snug text-foreground"
+        >
+          {title}
+        </h3>
+        <p className="mt-1 text-sm leading-relaxed text-muted">{tagline}</p>
+      </div>
       <div className="mt-4 flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {videos.map((video) => (
           <button
@@ -257,7 +260,13 @@ export function HomeBlogSection() {
           ))}
         </div>
       ) : null}
-      {showVideoSection ? <HomeVideoStrip videos={videos} title={t("home.trust.videosTitle")} /> : null}
+      {showVideoSection ? (
+        <HomeVideoStrip
+          videos={videos}
+          title={t("home.trust.videosTitle")}
+          tagline={t("home.trust.videosTagline")}
+        />
+      ) : null}
     </section>
   );
 }
