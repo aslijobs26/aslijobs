@@ -37,6 +37,7 @@ export const OPERATIONS_ROUTES = {
   BLOGS_NEW: "/operations/blogs/new",
   BLOG_CATEGORIES: "/operations/blog-categories",
   BLOG_TAGS: "/operations/blog-tags",
+  VIDEOS: "/operations/videos",
   TRANSACTIONS: "/operations/transactions",
   REFUNDS: "/operations/refunds",
   TRUST_COMPLIANCE: "/operations/trust-compliance",

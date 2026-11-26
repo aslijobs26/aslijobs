@@ -97,6 +97,33 @@ export async function requireEmployerAuth(
 }
 
 /**
+ * Restricts a route to the employer account owner role.
+ * Team-member tokens are deliberately excluded; those principals do not own
+ * employer-only account features such as Hire Assist.
+ */
+export async function requireEmployerRole(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await requireEmployerAuth(req, res, (error?: unknown) => {
+    if (error) {
+      next(error);
+      return;
+    }
+    if (
+      !req.employer ||
+      req.teamMemberId ||
+      req.workspacePrincipal !== "owner"
+    ) {
+      next(new AppError("Forbidden", HTTP_STATUS.FORBIDDEN));
+      return;
+    }
+    next();
+  });
+}
+
+/**
  * Attaches an employer workspace id when a valid employer or team token is
  * present. Anonymous and job-seeker requests continue without it.
  */

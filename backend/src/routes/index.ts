@@ -17,6 +17,7 @@ import teamRouter from "../modules/team/team.routes.js";
 import whatsappRouter from "../modules/whatsapp/whatsapp.routes.js";
 import hireAssistRouter from "../modules/hire-assist/hire-assist.routes.js";
 import blogPublicRouter from "../modules/blogs/blog.routes.js";
+import { videoPublicRouter } from "../modules/videos/video.routes.js";
 
 const apiRouter = Router();
 
@@ -36,6 +37,7 @@ apiRouter.use("/operations", operationsRouter);
 apiRouter.use("/whatsapp", whatsappRouter);
 apiRouter.use("/hire-assist", hireAssistRouter);
 apiRouter.use("/blogs", blogPublicRouter);
+apiRouter.use("/videos", videoPublicRouter);
 apiRouter.use("/subscriptions", subscriptionRouter);
 apiRouter.use("/payments", paymentRouter);
 

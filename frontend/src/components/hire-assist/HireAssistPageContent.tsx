@@ -25,6 +25,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
+import {
+  HireAssistAccessModal,
+  type HireAssistAccessRole,
+} from "@/components/hire-assist/HireAssistAccessModal";
 
 const STORAGE_KEY = "aslijobs.hireAssist.submission";
 
@@ -263,6 +270,7 @@ function AssistanceSelect({
 }
 
 export function HireAssistPageContent() {
+  const router = useRouter();
   const formId = useId();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<FieldName, string>>>({});
@@ -271,8 +279,17 @@ export function HireAssistPageContent() {
   const [clientRequestId, setClientRequestId] = useState("");
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [accessRole, setAccessRole] =
+    useState<Exclude<HireAssistAccessRole, "employer"> | null>(null);
 
   useEffect(() => {
+    if (!getEmployerAccessToken()) {
+      setAccessRole(
+        getJobSeekerAccessToken() ? "jobseeker" : "guest",
+      );
+      setReady(true);
+      return;
+    }
     const saved = readSavedSubmission();
     if (saved) {
       setTicketId(saved.ticketId);
@@ -371,6 +388,19 @@ export function HireAssistPageContent() {
       <main className="bg-hero-bg/40">
         <Container className="py-16">
           <p className="text-sm text-muted">Loading Hire Assist…</p>
+        </Container>
+      </main>
+    );
+  }
+
+  if (accessRole) {
+    return (
+      <main className="bg-hero-bg/40">
+        <Container className="py-16">
+          <HireAssistAccessModal
+            role={accessRole}
+            onClose={() => router.push(ROUTES.HOME)}
+          />
         </Container>
       </main>
     );

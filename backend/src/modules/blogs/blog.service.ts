@@ -4,6 +4,7 @@ import { env } from "../../config/env.js";
 import { HTTP_STATUS } from "../../constants/http-status.js";
 import { AppError } from "../../middleware/error.middleware.js";
 import { storageService } from "../storage/storage.service.js";
+import { toPublicMediaUrl } from "../storage/public-media-url.js";
 import type { StorageProviderName } from "../storage/storage.types.js";
 import { BlogAssetModel } from "./blog-asset.model.js";
 import { BlogCategoryModel } from "./blog-category.model.js";
@@ -66,6 +67,22 @@ type LeanBlog = {
   publishedAt?: Date | null;
   faqs?: { question: string; answer: string }[];
   relatedBlogIds?: Types.ObjectId[];
+  associatedVideo?: {
+    source: "youtube" | "uploaded";
+    title?: string;
+    description?: string;
+    youtubeUrl?: string;
+    youtubeVideoId?: string;
+    thumbnailUrl?: string;
+    videoFile?: {
+      url?: string;
+      storagePath?: string;
+      storageProvider?: "local" | "cloudinary";
+      publicId?: string;
+      mimeType?: string;
+      fileSize?: number;
+    } | null;
+  } | null;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -74,6 +91,33 @@ function iso(value: Date | null | undefined): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+function normalizeAssociatedVideo(video: NonNullable<BlogWriteBody["associatedVideo"]> | null | undefined) {
+  if (!video) return null;
+  if (video.source !== "youtube") return video;
+  let id = video.youtubeVideoId || "";
+  if (!/^[a-zA-Z0-9_-]{11}$/.test(id)) {
+    try {
+      const url = new URL(video.youtubeUrl);
+      const host = url.hostname.replace(/^www\./, "").replace(/^m\./, "").toLowerCase();
+      if (host === "youtu.be") id = url.pathname.split("/").filter(Boolean)[0] || "";
+      else if (host === "youtube.com" || host.endsWith(".youtube.com")) {
+        if (url.pathname.startsWith("/shorts/") || url.pathname.startsWith("/embed/") || url.pathname.startsWith("/live/")) {
+          id = url.pathname.split("/").filter(Boolean)[1] || "";
+        } else {
+          id = url.searchParams.get("v") || "";
+        }
+      }
+    } catch {
+      id = "";
+    }
+  }
+  return {
+    ...video,
+    youtubeVideoId: id.slice(0, 11),
+    thumbnailUrl: id ? `https://i.ytimg.com/vi/${id.slice(0, 11)}/hqdefault.jpg` : video.thumbnailUrl,
+  };
 }
 
 function imageOut(image: LeanImage, altFallback = "") {
@@ -97,6 +141,7 @@ function asTags(value: LeanBlog["tagIds"]): LeanTag[] {
 
 export function toPublicCard(blog: LeanBlog) {
   const category = asCategory(blog.categoryId);
+  const associatedVideo = blog.associatedVideo;
   return {
     id: String(blog._id),
     title: blog.title,
@@ -113,7 +158,22 @@ export function toPublicCard(blog: LeanBlog) {
     publishedAt: iso(blog.publishedAt),
     updatedAt: iso(blog.updatedAt),
     isFeatured: Boolean(blog.isFeatured),
-    youtubeVideoId: firstYoutubeVideoId(blog.content || ""),
+    youtubeVideoId: associatedVideo?.source === "youtube"
+      ? associatedVideo.youtubeVideoId || ""
+      : firstYoutubeVideoId(blog.content || ""),
+    associatedVideo: associatedVideo
+      ? {
+          source: associatedVideo.source,
+          title: associatedVideo.title || blog.title,
+          description: associatedVideo.description || blog.excerpt,
+          youtubeUrl: associatedVideo.youtubeUrl || "",
+          youtubeVideoId: associatedVideo.youtubeVideoId || "",
+          thumbnailUrl: associatedVideo.thumbnailUrl || "",
+          videoFile: associatedVideo.videoFile
+            ? { ...associatedVideo.videoFile, url: toPublicMediaUrl(associatedVideo.videoFile.url) }
+            : null,
+        }
+      : null,
   };
 }
 
@@ -171,6 +231,7 @@ function toAdminBlog(blog: LeanBlog) {
     scheduledAt: iso(blog.scheduledAt),
     publishedAt: iso(blog.publishedAt),
     relatedBlogIds: (blog.relatedBlogIds ?? []).map(String),
+    associatedVideo: blog.associatedVideo ?? null,
     createdAt: iso(blog.createdAt),
     updatedAt: iso(blog.updatedAt),
   };
@@ -593,6 +654,7 @@ export const blogService = {
       allowIndexing: body.allowIndexing,
       faqs: body.faqs,
       relatedBlogIds: body.relatedBlogIds,
+      associatedVideo: normalizeAssociatedVideo(body.associatedVideo),
       createdBy: userId || null,
       updatedBy: userId || null,
       ...timing,
@@ -640,6 +702,7 @@ export const blogService = {
       allowIndexing: body.allowIndexing,
       faqs: body.faqs,
       relatedBlogIds: body.relatedBlogIds,
+      associatedVideo: normalizeAssociatedVideo(body.associatedVideo),
       updatedBy: userId || null,
       ...timing,
     });

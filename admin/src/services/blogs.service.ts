@@ -9,6 +9,23 @@ export type BlogImage = {
   alt: string;
 };
 
+export type BlogAssociatedVideo = {
+  source: "youtube" | "uploaded";
+  title: string;
+  description: string;
+  youtubeUrl: string;
+  youtubeVideoId: string;
+  thumbnailUrl: string;
+  videoFile: {
+    url: string;
+    storagePath: string;
+    storageProvider: "local" | "cloudinary";
+    publicId: string;
+    mimeType: string;
+    fileSize: number;
+  } | null;
+};
+
 export type AdminBlog = {
   id: string;
   title: string;
@@ -41,6 +58,7 @@ export type AdminBlog = {
   relatedBlogIds: string[];
   createdAt: string | null;
   updatedAt: string | null;
+  associatedVideo: BlogAssociatedVideo | null;
 };
 
 export type AdminBlogList = {
@@ -102,6 +120,17 @@ export async function uploadBlogImage(file: File, purpose: string): Promise<Blog
   const response = await apiClient.post<{ data: BlogImage }>("/operations/blogs/images", form, {
     params: { purpose },
   });
+  return response.data.data;
+}
+
+export async function uploadBlogVideo(file: File): Promise<NonNullable<BlogAssociatedVideo["videoFile"]>> {
+  const form = new FormData();
+  form.append("video", file);
+  const response = await apiClient.post<{ data: NonNullable<BlogAssociatedVideo["videoFile"]> }>(
+    "/operations/videos/upload",
+    form,
+    { timeout: 10 * 60 * 1000 },
+  );
   return response.data.data;
 }
 

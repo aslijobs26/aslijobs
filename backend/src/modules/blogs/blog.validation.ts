@@ -28,6 +28,30 @@ const seoSchema = z
   })
   .optional();
 
+const blogVideoSchema = z
+  .object({
+    source: z.enum(["youtube", "uploaded"]),
+    title: z.string().trim().max(180).optional().default(""),
+    description: z.string().trim().max(400).optional().default(""),
+    youtubeUrl: z.string().trim().max(2000).optional().default(""),
+    youtubeVideoId: z.string().trim().max(20).optional().default(""),
+    thumbnailUrl: z.string().trim().max(2000).optional().default(""),
+    videoFile: z
+      .object({
+        url: z.string().trim().max(2000).optional().default(""),
+        storagePath: z.string().trim().max(500).optional().default(""),
+        storageProvider: z.enum(["local", "cloudinary"]).optional().default("local"),
+        publicId: z.string().trim().max(300).optional().default(""),
+        mimeType: z.string().trim().max(100).optional().default(""),
+        fileSize: z.number().int().min(0).optional().default(0),
+      })
+      .nullable()
+      .optional()
+      .default(null),
+  })
+  .nullable()
+  .optional();
+
 export const blogWriteSchema = z
   .object({
     title: z.string().trim().min(1, "Blog title is required.").max(180),
@@ -55,6 +79,7 @@ export const blogWriteSchema = z
       .optional()
       .default([]),
     relatedBlogIds: z.array(objectId).max(6).optional().default([]),
+    associatedVideo: blogVideoSchema,
     slug: z
       .string()
       .trim()
@@ -69,6 +94,15 @@ export const blogWriteSchema = z
         path: ["scheduledAt"],
         message: "Choose a publish date and time.",
       });
+    }
+    if (value.associatedVideo?.source === "youtube") {
+      const url = value.associatedVideo.youtubeUrl;
+      if (!/(?:youtube\.com\/(?:watch\?.*v=|embed\/|shorts\/)|youtu\.be\/)/i.test(url)) {
+        ctx.addIssue({ code: "custom", path: ["associatedVideo", "youtubeUrl"], message: "Enter a valid YouTube URL." });
+      }
+    }
+    if (value.associatedVideo?.source === "uploaded" && !value.associatedVideo.videoFile?.url) {
+      ctx.addIssue({ code: "custom", path: ["associatedVideo", "videoFile"], message: "Upload a video file." });
     }
   });
 

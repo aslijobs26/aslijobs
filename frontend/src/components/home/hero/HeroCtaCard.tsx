@@ -1,7 +1,16 @@
+"use client";
+
+import {
+  HireAssistAccessModal,
+  type HireAssistAccessRole,
+} from "@/components/hire-assist/HireAssistAccessModal";
 import { HeroEmployerPostJobLink } from "@/components/home/hero/HeroEmployerPostJobLink";
 import type { HeroCtaCardProps } from "@/types/cta";
 import { cn } from "@/utils/cn";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
 import Link from "next/link";
+import { useState, type MouseEvent } from "react";
 
 const cardVariants = {
   whatsapp: "bg-whatsapp-cta-surface",
@@ -38,14 +47,36 @@ export function HeroCtaCard({
   icon,
   variant,
 }: HeroCtaCardProps) {
+  const [accessModalRole, setAccessModalRole] =
+    useState<Exclude<HireAssistAccessRole, "employer"> | null>(null);
   const isExternal = href.startsWith("http");
   const className = actionClassName(variant);
+
+  function handleHireAssistClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (getEmployerAccessToken()) {
+      return;
+    }
+    event.preventDefault();
+    if (getJobSeekerAccessToken()) {
+      setAccessModalRole("jobseeker");
+      return;
+    }
+    setAccessModalRole("guest");
+  }
 
   const action =
     variant === "employer" ? (
       <HeroEmployerPostJobLink className={className}>
         {actionLabel}
       </HeroEmployerPostJobLink>
+    ) : variant === "assist" ? (
+      <Link
+        href={href}
+        onClick={handleHireAssistClick}
+        className={className}
+      >
+        {actionLabel}
+      </Link>
     ) : (
       <Link
         href={href}
@@ -82,6 +113,12 @@ export function HeroCtaCard({
         </p>
         <div className="mt-auto pt-3 sm:pt-4">{action}</div>
       </div>
+      {accessModalRole ? (
+        <HireAssistAccessModal
+          role={accessModalRole}
+          onClose={() => setAccessModalRole(null)}
+        />
+      ) : null}
     </article>
   );
 }

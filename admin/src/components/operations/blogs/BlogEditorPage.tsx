@@ -10,7 +10,9 @@ import {
   saveAdminBlog,
   saveBlogTag,
   uploadBlogImage,
+  uploadBlogVideo,
   type BlogCategoryRecord,
+  type BlogAssociatedVideo,
   type BlogImage,
   type BlogTagRecord,
 } from "../../../services/blogs.service";
@@ -46,6 +48,7 @@ type EditorState = {
   ogImage: BlogImage | null;
   faqs: { question: string; answer: string }[];
   relatedBlogIds: string;
+  associatedVideo: BlogAssociatedVideo | null;
 };
 
 const EMPTY: EditorState = {
@@ -74,6 +77,7 @@ const EMPTY: EditorState = {
   ogImage: null,
   faqs: [],
   relatedBlogIds: "",
+  associatedVideo: null,
 };
 
 function plainText(html: string) {
@@ -149,6 +153,7 @@ function toPayload(state: EditorState, status: EditorState["status"]) {
       .map((item) => ({ question: item.question.trim(), answer: item.answer.trim() }))
       .filter((item) => item.question && item.answer),
     relatedBlogIds: state.relatedBlogIds.split(",").map((item) => item.trim()).filter(Boolean),
+    associatedVideo: state.associatedVideo,
   };
 }
 
@@ -203,6 +208,7 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
         ogImage: blog.seo.ogImage ?? null,
         faqs: blog.faqs ?? [],
         relatedBlogIds: blog.relatedBlogIds.join(", "),
+        associatedVideo: blog.associatedVideo ?? null,
       });
     }).catch((err) => setError(getOperationsApiErrorMessage(err, "Could not load this blog.")));
   }, [blogId]);
@@ -415,6 +421,93 @@ export function BlogEditorPage({ blogId }: { blogId?: string }) {
                 onChange={(event) => patch({ isFeatured: event.target.checked })}
               />
             </label>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-border-subtle bg-surface shadow-sm">
+          <header className="flex items-start gap-2.5 border-b border-border-subtle bg-hero-bg/40 px-4 py-3">
+            <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <PenLine className="size-4" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-[13px] font-semibold tracking-tight text-foreground">Associated video</h2>
+              <p className="mt-0.5 text-[11px] leading-snug text-muted">Optional. Published blogs with a video appear in the homepage Latest videos section.</p>
+            </div>
+          </header>
+          <div className="grid gap-3 p-4">
+            <Field label="Video source" field="associatedVideo">
+              <select
+                className={inputClass}
+                value={state.associatedVideo?.source || ""}
+                onChange={(event) => {
+                  const source = event.target.value as "" | "youtube" | "uploaded";
+                  patch({
+                    associatedVideo: source
+                      ? { source, title: state.title, description: state.excerpt, youtubeUrl: "", youtubeVideoId: "", thumbnailUrl: "", videoFile: null }
+                      : null,
+                  });
+                }}
+              >
+                <option value="">No associated video</option>
+                <option value="youtube">YouTube video</option>
+                <option value="uploaded">Uploaded video</option>
+              </select>
+            </Field>
+            {state.associatedVideo ? (
+              <>
+                {state.associatedVideo.source === "youtube" ? (
+                  <Field label="YouTube URL" field="associatedVideo.youtubeUrl">
+                    <input
+                      className={inputClass}
+                      placeholder="https://youtube.com/watch?v=..."
+                      value={state.associatedVideo.youtubeUrl}
+                      onChange={(event) => {
+                        const url = event.target.value;
+                        let id = "";
+                        try {
+                          const parsed = new URL(url);
+                          if (parsed.hostname.includes("youtu.be")) id = parsed.pathname.split("/").filter(Boolean)[0] || "";
+                          else if (parsed.pathname.startsWith("/shorts/") || parsed.pathname.startsWith("/embed/")) id = parsed.pathname.split("/").filter(Boolean)[1] || "";
+                          else id = parsed.searchParams.get("v") || "";
+                        } catch {}
+                        patch({ associatedVideo: { ...state.associatedVideo!, youtubeUrl: url, youtubeVideoId: id.slice(0, 11), thumbnailUrl: id ? `https://i.ytimg.com/vi/${id.slice(0, 11)}/hqdefault.jpg` : "" } });
+                      }}
+                    />
+                  </Field>
+                ) : (
+                  <Field label="Video file" field="associatedVideo.videoFile">
+                    <input
+                      type="file"
+                      accept="video/mp4,video/webm"
+                      onChange={async (event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        if (file.size > 100 * 1024 * 1024) {
+                          setError("Video must be 100 MB or smaller.");
+                          return;
+                        }
+                        try {
+                          const videoFile = await uploadBlogVideo(file);
+                          patch({ associatedVideo: { ...state.associatedVideo!, videoFile } });
+                        } catch (err) {
+                          setError(getOperationsApiErrorMessage(err, "Could not upload the video."));
+                        }
+                      }}
+                    />
+                  </Field>
+                )}
+                {state.associatedVideo.youtubeVideoId || state.associatedVideo.videoFile?.url ? (
+                  <div className="aspect-video overflow-hidden rounded-lg bg-black">
+                    {state.associatedVideo.source === "youtube" ? (
+                      <iframe className="size-full" src={`https://www.youtube-nocookie.com/embed/${state.associatedVideo.youtubeVideoId}`} title="Video preview" allowFullScreen />
+                    ) : (
+                      <video className="size-full" src={state.associatedVideo.videoFile?.url} controls />
+                    )}
+                  </div>
+                ) : null}
+                <button type="button" className="h-8 self-start rounded-lg border border-danger/20 px-3 text-[12px] font-semibold text-danger" onClick={() => patch({ associatedVideo: null })}>Remove video</button>
+              </>
+            ) : null}
           </div>
         </section>
 

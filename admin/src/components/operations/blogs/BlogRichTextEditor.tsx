@@ -6,7 +6,7 @@ import TableCell from "@tiptap/extension-table-cell";
 import TableHeader from "@tiptap/extension-table-header";
 import TableRow from "@tiptap/extension-table-row";
 import Underline from "@tiptap/extension-underline";
-import Youtube from "@tiptap/extension-youtube";
+import Youtube, { isValidYoutubeUrl } from "@tiptap/extension-youtube";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -36,6 +36,24 @@ type BlogRichTextEditorProps = {
   onUploadImage: (file: File) => Promise<string>;
 };
 
+function prepareYoutubeEmbeds(html: string) {
+  if (!html || typeof DOMParser === "undefined") return html;
+
+  const document = new DOMParser().parseFromString(html, "text/html");
+  document.querySelectorAll("iframe").forEach((iframe) => {
+    if (iframe.parentElement?.matches("[data-youtube-video]")) return;
+    const src = iframe.getAttribute("src")?.trim() ?? "";
+    if (!isValidYoutubeUrl(src)) return;
+
+    const wrapper = document.createElement("div");
+    wrapper.setAttribute("data-youtube-video", "");
+    iframe.replaceWith(wrapper);
+    wrapper.append(iframe);
+  });
+
+  return document.body.innerHTML;
+}
+
 export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichTextEditorProps) {
   const editor = useEditor({
     extensions: [
@@ -50,7 +68,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
       TableCell,
       Placeholder.configure({ placeholder: "Write the article…" }),
     ],
-    content: value || "",
+    content: prepareYoutubeEmbeds(value || ""),
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -64,7 +82,7 @@ export function BlogRichTextEditor({ value, onChange, onUploadImage }: BlogRichT
     if (!editor || !value) return;
     const current = editor.getHTML();
     if (current === "<p></p>" || current === "") {
-      editor.commands.setContent(value, { emitUpdate: false });
+      editor.commands.setContent(prepareYoutubeEmbeds(value), { emitUpdate: false });
     }
   }, [editor, value]);
 

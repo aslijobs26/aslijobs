@@ -4,6 +4,7 @@ import { validate } from "../../middleware/validate.middleware.js";
 import { asyncHandler } from "../../utils/async-handler.js";
 import { hireAssistController } from "./hire-assist.controller.js";
 import { createHireAssistBodySchema } from "./hire-assist.validation.js";
+import { requireEmployerRole } from "../../middleware/auth.middleware.js";
 
 const hireAssistRouter = Router();
 
@@ -20,6 +21,7 @@ const submitLimiter = rateLimit({
 
 hireAssistRouter.post(
   "/",
+  requireEmployerRole,
   submitLimiter,
   validate(createHireAssistBodySchema, "body"),
   asyncHandler(hireAssistController.create),

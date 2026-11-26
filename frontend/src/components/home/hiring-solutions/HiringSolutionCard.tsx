@@ -1,3 +1,5 @@
+"use client";
+
 import { HeroEmployerPostJobLink } from "@/components/home/hero/HeroEmployerPostJobLink";
 import type { HiringSolution, HiringSolutionVariant } from "@/types/hiring-solutions";
 import { cn } from "@/utils/cn";
@@ -10,6 +12,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { useState, type MouseEvent } from "react";
+import { getEmployerAccessToken } from "@/utils/employer-auth-storage";
+import { getJobSeekerAccessToken } from "@/utils/job-seeker-auth-storage";
+import { HireAssistAccessModal, type HireAssistAccessRole } from "@/components/hire-assist/HireAssistAccessModal";
 
 const themeStyles: Record<
   HiringSolutionVariant,
@@ -78,11 +84,25 @@ type HiringSolutionCardProps = {
 };
 
 export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
+  const [accessModalRole, setAccessModalRole] =
+    useState<Exclude<HireAssistAccessRole, "employer"> | null>(null);
   const theme = themeStyles[solution.id];
   const actionClassName = cn(
     "inline-flex min-h-11 w-full items-center justify-center rounded-xl border-2 bg-surface px-4 py-2 text-center text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2",
     theme.button,
   );
+
+  function handleHireAssistClick(event: MouseEvent<HTMLAnchorElement>) {
+    if (getEmployerAccessToken()) {
+      return;
+    }
+    event.preventDefault();
+    if (getJobSeekerAccessToken()) {
+      setAccessModalRole("jobseeker");
+      return;
+    }
+    setAccessModalRole("guest");
+  }
 
   return (
     <article
@@ -122,11 +142,25 @@ export function HiringSolutionCard({ solution }: HiringSolutionCardProps) {
         <HeroEmployerPostJobLink className={actionClassName}>
           {solution.actionLabel}
         </HeroEmployerPostJobLink>
+      ) : solution.id === "hire-assist" ? (
+          <Link
+            href={solution.href}
+          onClick={handleHireAssistClick}
+          className={actionClassName}
+        >
+          {solution.actionLabel}
+          </Link>
       ) : (
         <Link href={solution.href} className={actionClassName}>
           {solution.actionLabel}
         </Link>
       )}
+      {accessModalRole ? (
+        <HireAssistAccessModal
+          role={accessModalRole}
+          onClose={() => setAccessModalRole(null)}
+        />
+      ) : null}
     </article>
   );
 }

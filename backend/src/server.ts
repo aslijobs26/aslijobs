@@ -151,6 +151,7 @@ async function startServer(): Promise<void> {
       `[startup] ready environment=${env.NODE_ENV} database=${getConnectedDatabaseName() ?? "none"}`,
     );
   });
+  httpServer.requestTimeout = 10 * 60 * 1000;
 
   process.on("SIGTERM", () => {
     void shutdown("SIGTERM", 0);

@@ -26,6 +26,7 @@ import {
   blogCategoryAdminRouter,
   blogTagAdminRouter,
 } from "../blogs/blog.admin.routes.js";
+import { videoAdminRouter } from "../videos/video.routes.js";
 
 export const operationsRouter = Router();
 
@@ -57,5 +58,6 @@ operationsRouter.use("/hire-assist", hireAssistAdminRouter);
 operationsRouter.use("/blogs", blogAdminRouter);
 operationsRouter.use("/blog-categories", blogCategoryAdminRouter);
 operationsRouter.use("/blog-tags", blogTagAdminRouter);
+operationsRouter.use("/videos", videoAdminRouter);
 
 export default operationsRouter;

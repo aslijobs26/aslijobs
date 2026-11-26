@@ -43,6 +43,7 @@ import { OperationsBlogPreviewPage } from "./operations-blog-preview-page";
 import { OperationsBlogCategoriesPage } from "./operations-blog-categories-page";
 import { OperationsBlogTagsPage } from "./operations-blog-tags-page";
 import { OperationsSubscriptionsPage } from "./operations-subscriptions-page";
+import { OperationsVideosPage } from "./operations-videos-page";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
 function OperationsProtectedLayout() {
@@ -223,6 +224,7 @@ export function AppRoutes() {
         <Route path={OPERATIONS_ROUTES.BLOGS} element={<OperationsBlogsPage />} />
         <Route path={OPERATIONS_ROUTES.BLOG_CATEGORIES} element={<OperationsBlogCategoriesPage />} />
         <Route path={OPERATIONS_ROUTES.BLOG_TAGS} element={<OperationsBlogTagsPage />} />
+        <Route path={OPERATIONS_ROUTES.VIDEOS} element={<OperationsVideosPage />} />
         <Route
           path={OPERATIONS_ROUTES.BUSINESS_DEVELOPMENT}
           element={

@@ -80,16 +80,19 @@ export class CloudinaryStorageProvider implements StorageProvider {
     const resourceType = resolveResourceType(input.mimeType);
 
     return new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        {
-          folder,
-          public_id: publicId,
-          resource_type: resourceType,
-          overwrite: false,
-          unique_filename: false,
-          use_filename: false,
-        },
-        (error, result) => {
+      const uploadOptions = {
+        folder,
+        public_id: publicId,
+        resource_type: resourceType,
+        overwrite: false,
+        unique_filename: false,
+        use_filename: false,
+        ...(resourceType === "video" ? { chunk_size: 6_000_000 } : {}),
+      };
+      const uploadStream = resourceType === "video"
+        ? cloudinary.uploader.upload_chunked_stream
+        : cloudinary.uploader.upload_stream;
+      const stream = uploadStream(uploadOptions, (error, result) => {
           if (error || !result) {
             reject(
               new AppError(
@@ -101,10 +104,9 @@ export class CloudinaryStorageProvider implements StorageProvider {
           }
 
           resolve(result);
-        },
-      );
+        });
 
-      Readable.from(input.buffer).pipe(stream);
+      Readable.from([input.buffer]).pipe(stream);
     });
   }
 

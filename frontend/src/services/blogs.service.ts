@@ -23,6 +23,15 @@ export type BlogCard = {
   updatedAt: string | null;
   isFeatured: boolean;
   youtubeVideoId: string;
+  associatedVideo: {
+    source: "youtube" | "uploaded";
+    title: string;
+    description: string;
+    youtubeUrl: string;
+    youtubeVideoId: string;
+    thumbnailUrl: string;
+    videoFile: { url: string } | null;
+  } | null;
 };
 
 export type BlogFaq = {

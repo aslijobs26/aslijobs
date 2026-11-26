@@ -11,6 +11,26 @@ const storedImageSchema = new Schema(
   { _id: false },
 );
 
+const associatedVideoSchema = new Schema(
+  {
+    source: { type: String, enum: ["youtube", "uploaded"], required: true },
+    title: { type: String, trim: true, default: "", maxlength: 180 },
+    description: { type: String, trim: true, default: "", maxlength: 400 },
+    youtubeUrl: { type: String, trim: true, default: "" },
+    youtubeVideoId: { type: String, trim: true, default: "" },
+    thumbnailUrl: { type: String, trim: true, default: "" },
+    videoFile: {
+      url: { type: String, trim: true, default: "" },
+      storagePath: { type: String, trim: true, default: "" },
+      storageProvider: { type: String, enum: ["local", "cloudinary"], default: "local" },
+      publicId: { type: String, trim: true, default: "" },
+      mimeType: { type: String, trim: true, default: "" },
+      fileSize: { type: Number, default: 0 },
+    },
+  },
+  { _id: false },
+);
+
 const blogSchema = new Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 180 },
@@ -69,6 +89,7 @@ const blogSchema = new Schema(
       type: [{ type: Schema.Types.ObjectId, ref: "Blog" }],
       default: [],
     },
+    associatedVideo: { type: associatedVideoSchema, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: "OperationsTeamUser", default: null },
     updatedBy: { type: Schema.Types.ObjectId, ref: "OperationsTeamUser", default: null },
   },
