@@ -1,5 +1,6 @@
 import { ArticleBackLink } from "@/components/blogs/ArticleBackLink";
 import { BlogHtml } from "@/components/blogs/BlogHtml";
+import { BlogEngagementBar } from "@/components/blogs/BlogEngagementBar";
 import { BlogShareBar } from "@/components/blogs/BlogShareBar";
 import { Container } from "@/components/layout/Container";
 import { ROUTES } from "@/constants/routes";
@@ -14,11 +15,13 @@ export function BlogArticleView({
   related,
   popular,
   showBack = true,
+  enableEngagement = showBack,
 }: {
   article: BlogArticle;
   related: BlogCard[];
   popular: BlogCard[];
   showBack?: boolean;
+  enableEngagement?: boolean;
 }) {
   const published = article.publishedAt ? formatBlogDate(article.publishedAt) : "";
   const context = article.headings.some((heading) => heading.level === 2)
@@ -71,7 +74,17 @@ export function BlogArticleView({
                   </span>
                 ) : null}
               </div>
-              <BlogShareBar article={article} />
+              <div className="flex flex-wrap items-center gap-2">
+                {enableEngagement ? (
+                  <BlogEngagementBar
+                    key={article.slug}
+                    slug={article.slug}
+                    initialViews={article.views}
+                    initialLikes={article.likes}
+                  />
+                ) : null}
+                <BlogShareBar article={article} />
+              </div>
             </div>
           </header>
 

@@ -5,6 +5,10 @@ import { storageService } from "../storage/storage.service.js";
 import { sendSuccess } from "../../utils/api-response.js";
 import { BlogAssetModel } from "./blog-asset.model.js";
 import { blogService } from "./blog.service.js";
+import {
+  resolveBlogEngagementVisitor,
+  setBlogEngagementVisitorCookie,
+} from "./blog-engagement.visitor.js";
 import type {
   BlogListQuery,
   BlogWriteBody,
@@ -43,6 +47,44 @@ export const blogController = {
 
   async bySlug(req: Request, res: Response) {
     const data = await blogService.bySlug(String(req.params.slug ?? ""));
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async recordPublicView(req: Request, res: Response) {
+    const visitor = resolveBlogEngagementVisitor(req);
+    const data = await blogService.recordPublicView(
+      String(req.params.slug ?? ""),
+      visitor.visitorId,
+    );
+    if (visitor.shouldSetCookie) {
+      setBlogEngagementVisitorCookie(res, visitor.visitorId);
+    }
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async like(req: Request, res: Response) {
+    const visitor = resolveBlogEngagementVisitor(req);
+    const data = await blogService.setPublicLike(
+      String(req.params.slug ?? ""),
+      visitor.visitorId,
+      true,
+    );
+    if (visitor.shouldSetCookie) {
+      setBlogEngagementVisitorCookie(res, visitor.visitorId);
+    }
+    sendSuccess(res, HTTP_STATUS.OK, { data });
+  },
+
+  async unlike(req: Request, res: Response) {
+    const visitor = resolveBlogEngagementVisitor(req);
+    const data = await blogService.setPublicLike(
+      String(req.params.slug ?? ""),
+      visitor.visitorId,
+      false,
+    );
+    if (visitor.shouldSetCookie) {
+      setBlogEngagementVisitorCookie(res, visitor.visitorId);
+    }
     sendSuccess(res, HTTP_STATUS.OK, { data });
   },
 

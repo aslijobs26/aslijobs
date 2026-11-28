@@ -22,3 +22,5 @@ export function staticJobLabel(
   const key = (group === "jobType" ? JOB_TYPE_KEYS : WORK_MODE_KEYS)[value];
   return key ? translate(language, key) : null;
 }
+
+

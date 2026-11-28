@@ -182,3 +182,5 @@ describe("employer dashboard language isolation", () => {
     assert.equal(loginContent.includes("NavbarLanguageButton"), true);
   });
 });
+
+

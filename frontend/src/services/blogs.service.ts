@@ -41,6 +41,8 @@ export type BlogFaq = {
 
 export type BlogArticle = BlogCard & {
   content: string;
+  views: number;
+  likes: number;
   faqs: BlogFaq[];
   headings: { id: string; text: string; level: 2 | 3 }[];
   authorImageUrl: string;
@@ -54,6 +56,12 @@ export type BlogArticle = BlogCard & {
     ogImageUrl: string;
     keywords: string[];
   };
+};
+
+export type BlogEngagement = {
+  views: number;
+  likes: number;
+  liked: boolean;
 };
 
 export type BlogList = {
@@ -75,6 +83,39 @@ async function publicGet<T>(path: string): Promise<T> {
   }
   const body = (await response.json()) as { data: T };
   return body.data;
+}
+
+async function publicEngagementRequest(
+  slug: string,
+  action: "view" | "like",
+  method: "POST" | "PUT" | "DELETE",
+): Promise<BlogEngagement> {
+  const apiUrl = resolveApiUrl(process.env.NEXT_PUBLIC_API_URL);
+  const response = await fetch(
+    `${apiUrl}/blogs/${encodeURIComponent(slug)}/${action}`,
+    {
+      method,
+      headers: { Accept: "application/json" },
+      credentials: "include",
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) {
+    throw new Error(`Blog engagement request failed (${response.status})`);
+  }
+  const body = (await response.json()) as { data: BlogEngagement };
+  return body.data;
+}
+
+export function recordBlogView(slug: string): Promise<BlogEngagement> {
+  return publicEngagementRequest(slug, "view", "POST");
+}
+
+export function setBlogLike(
+  slug: string,
+  liked: boolean,
+): Promise<BlogEngagement> {
+  return publicEngagementRequest(slug, "like", liked ? "PUT" : "DELETE");
 }
 
 export class BlogNotFoundError extends Error {

@@ -8,6 +8,7 @@ import { toPublicMediaUrl } from "../storage/public-media-url.js";
 import type { StorageProviderName } from "../storage/storage.types.js";
 import { BlogAssetModel } from "./blog-asset.model.js";
 import { BlogCategoryModel } from "./blog-category.model.js";
+import { BlogEngagementModel } from "./blog-engagement.model.js";
 import { DEFAULT_BLOG_CATEGORIES } from "./blog.constants.js";
 import {
   estimateReadingMinutes,
@@ -60,6 +61,8 @@ type LeanBlog = {
   authorImage?: LeanImage;
   seo?: BlogWriteBody["seo"];
   readingTimeMinutes?: number;
+  views?: number;
+  likes?: number;
   status: "draft" | "published" | "scheduled";
   isFeatured?: boolean;
   allowIndexing?: boolean;
@@ -181,6 +184,8 @@ export function toPublicArticle(blog: LeanBlog) {
   const content = sanitizeBlogHtml(blog.content);
   return {
     ...toPublicCard(blog),
+    views: blog.views ?? 0,
+    likes: blog.likes ?? 0,
     content,
     headings: extractBlogHeadings(content),
     authorImageUrl: blog.authorImage?.url ?? "",
@@ -442,6 +447,62 @@ async function deleteAssetsForBlog(blogId: string) {
   await BlogAssetModel.deleteMany({ blogId });
 }
 
+const BLOG_VIEW_COOLDOWN_MS = 30 * 60 * 1000;
+
+function isDuplicateKeyError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: number }).code === 11000
+  );
+}
+
+async function findPublicBlogForEngagement(slug: string) {
+  await publishDueBlogs();
+  const blog = await BlogModel.findOne({ slug, ...publishedFilter() })
+    .select("_id views likes")
+    .lean();
+  if (!blog) {
+    throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
+  }
+  return blog;
+}
+
+async function readPublicEngagement(blogId: Types.ObjectId, visitorId: string) {
+  const [blog, engagement] = await Promise.all([
+    BlogModel.findById(blogId).select("views likes").lean(),
+    BlogEngagementModel.findOne({ blogId, visitorId }).select("liked").lean(),
+  ]);
+  if (!blog) {
+    throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
+  }
+  return {
+    views: blog.views ?? 0,
+    likes: blog.likes ?? 0,
+    liked: Boolean(engagement?.liked),
+  };
+}
+
+async function countReturningBlogView(
+  blogId: Types.ObjectId,
+  visitorId: string,
+  now: Date,
+  threshold: Date,
+): Promise<boolean> {
+  const result = await BlogEngagementModel.updateOne(
+    {
+      blogId,
+      visitorId,
+      $or: [{ lastViewedAt: null }, { lastViewedAt: { $lte: threshold } }],
+    },
+    { $set: { lastViewedAt: now } },
+  );
+  if (result.modifiedCount !== 1) return false;
+  await BlogModel.updateOne({ _id: blogId }, { $inc: { views: 1 } });
+  return true;
+}
+
 export const blogService = {
   async listPublic(query: PublicBlogListQuery) {
     await publishDueBlogs();
@@ -493,6 +554,68 @@ export const blogService = {
       throw new AppError("Article not found.", HTTP_STATUS.NOT_FOUND);
     }
     return toPublicArticle(row as unknown as LeanBlog);
+  },
+
+  async recordPublicView(slug: string, visitorId: string) {
+    const blog = await findPublicBlogForEngagement(slug);
+    const now = new Date();
+    const threshold = new Date(now.getTime() - BLOG_VIEW_COOLDOWN_MS);
+    try {
+      const result = await BlogEngagementModel.updateOne(
+        { blogId: blog._id, visitorId },
+        {
+          $setOnInsert: {
+            blogId: blog._id,
+            visitorId,
+            lastViewedAt: now,
+            liked: false,
+          },
+        },
+        { upsert: true },
+      );
+      if (result.upsertedCount === 1) {
+        await BlogModel.updateOne({ _id: blog._id }, { $inc: { views: 1 } });
+      } else {
+        await countReturningBlogView(blog._id, visitorId, now, threshold);
+      }
+    } catch (error) {
+      if (!isDuplicateKeyError(error)) throw error;
+      await countReturningBlogView(blog._id, visitorId, now, threshold);
+    }
+    return readPublicEngagement(blog._id, visitorId);
+  },
+
+  async setPublicLike(slug: string, visitorId: string, liked: boolean) {
+    const blog = await findPublicBlogForEngagement(slug);
+    const result = await BlogEngagementModel.updateOne(
+      { blogId: blog._id, visitorId, liked: !liked },
+      { $set: { liked } },
+    );
+    if (result.modifiedCount === 1) {
+      await BlogModel.updateOne(
+        { _id: blog._id },
+        { $inc: { likes: liked ? 1 : -1 } },
+      );
+    } else if (liked) {
+      const existing = await BlogEngagementModel.exists({
+        blogId: blog._id,
+        visitorId,
+      });
+      if (!existing) {
+        try {
+          await BlogEngagementModel.create({
+            blogId: blog._id,
+            visitorId,
+            lastViewedAt: null,
+            liked: true,
+          });
+          await BlogModel.updateOne({ _id: blog._id }, { $inc: { likes: 1 } });
+        } catch (error) {
+          if (!isDuplicateKeyError(error)) throw error;
+        }
+      }
+    }
+    return readPublicEngagement(blog._id, visitorId);
   },
 
   async related(slug: string) {

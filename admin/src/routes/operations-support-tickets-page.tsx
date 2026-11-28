@@ -7,9 +7,17 @@ import {
 } from "../services/hire-assist.service";
 import axios from "axios";
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, ArrowRight, Search, Save, Workflow } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  ArrowUpRight,
+  Inbox,
+  Search,
+  Save,
+  SlidersHorizontal,
+  Workflow,
+} from "lucide-react";
 import { OperationsBadge } from "../components/ui/OperationsBadge";
-import { OperationsCard } from "../components/ui/OperationsCard";
 import { operationsFieldInputClassName } from "../components/ui/OperationsFormField";
 import { cn } from "../utils/cn";
 import { tableRowHover } from "../components/ui/table-row-hover";
@@ -172,13 +180,22 @@ export function OperationsSupportTicketsPage() {
       subtitle="Hire Assist requests submitted from the website."
     >
       <div className="flex min-w-0 flex-col gap-3">
-        <OperationsCard
-          title="Find support requests"
-          subtitle="Search by requester or narrow tickets by status and request type."
-          className="ops-brand-border-glow"
-          bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-[minmax(240px,1fr)_minmax(160px,0.65fr)_minmax(220px,0.8fr)_auto] xl:items-end"
-          action={
-            search || status || assistanceType ? (
+        <section className="ops-brand-border-glow overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+                <SlidersHorizontal className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Find support requests
+                </h2>
+                <p className="mt-0.5 text-xs text-muted">
+                  Search by requester or filter by status and request type.
+                </p>
+              </div>
+            </div>
+            {search || status || assistanceType ? (
               <button
                 type="button"
                 onClick={() => {
@@ -187,81 +204,90 @@ export function OperationsSupportTicketsPage() {
                   setStatus("");
                   setAssistanceType("");
                 }}
-                className="inline-flex h-8 items-center rounded-lg px-2.5 text-[11px] font-semibold text-primary hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                className="inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold text-primary transition hover:bg-primary-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               >
                 Clear filters
               </button>
-            ) : null
-          }
-        >
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] font-semibold text-foreground">Search</span>
-            <span className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-                aria-hidden="true"
-              />
-              <input
-                value={search}
+            ) : null}
+          </header>
+          <div className="grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-[minmax(240px,1fr)_minmax(160px,0.65fr)_minmax(220px,0.8fr)_auto] xl:items-end">
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground">Search</span>
+              <span className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+                  aria-hidden="true"
+                />
+                <input
+                  value={search}
+                  onChange={(event) => {
+                    setPage(1);
+                    setSearch(event.target.value);
+                  }}
+                  placeholder="Name, email, mobile, or ticket ID"
+                  className={cn(operationsFieldInputClassName, "pl-9")}
+                />
+              </span>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground">Status</span>
+              <select
+                value={status}
                 onChange={(event) => {
                   setPage(1);
-                  setSearch(event.target.value);
+                  setStatus(event.target.value);
                 }}
-                placeholder="Name, email, mobile, or ticket ID"
-                className={cn(operationsFieldInputClassName, "pl-9")}
-              />
-            </span>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] font-semibold text-foreground">Status</span>
-            <select
-              value={status}
-              onChange={(event) => {
-                setPage(1);
-                setStatus(event.target.value);
-              }}
-              className={operationsFieldInputClassName}
-            >
-              <option value="">All statuses</option>
-              {STATUS_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex min-w-0 flex-col gap-1">
-            <span className="text-[11px] font-semibold text-foreground">Request type</span>
-            <select
-              value={assistanceType}
-              onChange={(event) => {
-                setPage(1);
-                setAssistanceType(event.target.value);
-              }}
-              className={operationsFieldInputClassName}
-            >
-              <option value="">All Hire Assist types</option>
-              {ASSISTANCE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </OperationsCard>
+                className={operationsFieldInputClassName}
+              >
+                <option value="">All statuses</option>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1.5">
+              <span className="text-xs font-semibold text-foreground">Request type</span>
+              <select
+                value={assistanceType}
+                onChange={(event) => {
+                  setPage(1);
+                  setAssistanceType(event.target.value);
+                }}
+                className={operationsFieldInputClassName}
+              >
+                <option value="">All Hire Assist types</option>
+                {ASSISTANCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </section>
 
-        <OperationsCard
-          title="Hire Assist tickets"
-          subtitle="Requests submitted from the website."
-          badge={
+        <section className="ops-brand-border-glow overflow-hidden rounded-2xl border border-border-subtle bg-surface shadow-sm">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3 sm:px-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+                <Inbox className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-foreground">
+                  Hire Assist tickets
+                </h2>
+                <p className="mt-0.5 text-xs text-muted">
+                  Requests submitted from the website.
+                </p>
+              </div>
+            </div>
             <OperationsBadge variant="support">
               {total.toLocaleString("en-IN")} total
             </OperationsBadge>
-          }
-          className="ops-brand-border-glow overflow-hidden"
-          bodyClassName="p-0"
-        >
-          <ul className="flex flex-col gap-2.5 p-2.5 xl:hidden">
+          </header>
+          <ul className="flex flex-col gap-3 p-3 sm:p-4 xl:hidden">
             {loading ? (
               <li className="px-2 py-10 text-center text-xs text-muted">
                 Loading tickets…
@@ -288,30 +314,35 @@ export function OperationsSupportTicketsPage() {
               items.map((item) => (
                 <li
                   key={item.id}
-                  className="min-w-0 rounded-xl border border-border-subtle bg-surface p-3 shadow-sm md:p-4"
+                  className="group min-w-0 rounded-xl border border-border-subtle bg-surface p-4 shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-md md:p-5"
                 >
-                  <div className="flex min-w-0 items-start justify-between gap-3 border-b border-border-subtle pb-2.5 md:items-center md:pb-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-mono text-[11px] font-semibold text-primary">
-                        {item.ticketId}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-foreground md:text-[13px]">
-                        {item.fullName}
-                      </p>
-                      <p className="mt-0.5 truncate text-[11px] text-muted">
-                        {item.companyName}
-                      </p>
+                  <div className="flex min-w-0 items-start justify-between gap-3 border-b border-border-subtle pb-3 md:items-center">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-hero-bg text-primary">
+                        <Inbox className="size-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate font-mono text-[11px] font-semibold tracking-wide text-primary">
+                          {item.ticketId}
+                        </p>
+                        <p className="mt-0.5 truncate text-sm font-semibold text-foreground">
+                          {item.fullName}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-muted">
+                          {item.companyName}
+                        </p>
+                      </div>
                     </div>
                     <OperationsBadge variant={statusBadgeVariant(item.status)}>
                       {item.statusLabel}
                     </OperationsBadge>
                   </div>
-                  <div className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-3 text-[11px] md:grid-cols-3 md:gap-x-5">
+                  <div className="mt-4 grid min-w-0 grid-cols-2 gap-x-4 gap-y-4 text-xs md:grid-cols-3 md:gap-x-5">
                     <div className="min-w-0">
                       <span className="block text-[10px] uppercase tracking-wide text-muted">
                         Request
                       </span>
-                      <span className="mt-0.5 block break-words font-medium text-foreground">
+                      <span className="mt-1 block break-words font-medium text-foreground">
                         {item.assistanceLabel}
                       </span>
                     </div>
@@ -319,7 +350,7 @@ export function OperationsSupportTicketsPage() {
                       <span className="block text-[10px] uppercase tracking-wide text-muted">
                         Submitted
                       </span>
-                      <span className="mt-0.5 block text-foreground">
+                      <span className="mt-1 block text-foreground">
                         {formatWhen(item.createdAt)}
                       </span>
                     </div>
@@ -327,22 +358,23 @@ export function OperationsSupportTicketsPage() {
                       <span className="block text-[10px] uppercase tracking-wide text-muted">
                         Contact
                       </span>
-                      <span className="mt-0.5 block break-all text-foreground">
+                      <span className="mt-1 block break-all text-foreground">
                         {item.email}
                       </span>
                       <span className="mt-0.5 block text-muted">{item.mobileNumber}</span>
                     </div>
                   </div>
-                  <div className="mt-3 flex items-center justify-between gap-3 border-t border-border-subtle pt-2.5 text-[11px] md:pt-3">
+                  <div className="mt-4 flex items-center justify-between gap-3 border-t border-border-subtle pt-3 text-xs">
                     <span className="text-muted">
                       Source: <span className="font-medium text-foreground">{item.source}</span>
                     </span>
                     <button
                       type="button"
                       onClick={() => void openTicket(item.id)}
-                      className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg bg-primary-light px-3 font-semibold text-primary transition hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                      className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-primary/15 bg-primary-light px-3 font-semibold text-primary transition hover:border-primary/30 hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                     >
                       View details
+                      <ArrowUpRight className="size-3.5" aria-hidden="true" />
                     </button>
                   </div>
                 </li>
@@ -352,7 +384,7 @@ export function OperationsSupportTicketsPage() {
 
           <div className="hidden overflow-x-auto overscroll-x-contain scrollbar-hidden xl:block">
             <table className="min-w-[920px] w-full text-left text-xs">
-              <thead className="border-b border-border-subtle bg-hero-bg/60 text-muted">
+              <thead className="border-b border-border-subtle bg-hero-bg/70 text-muted">
                 <tr>
                   <th scope="col" className="whitespace-nowrap px-3 py-2.5 pl-4 text-[10px] font-semibold uppercase tracking-wide">
                     Ticket
@@ -448,9 +480,10 @@ export function OperationsSupportTicketsPage() {
                         <button
                           type="button"
                           onClick={() => void openTicket(item.id)}
-                          className="inline-flex h-8 items-center justify-center rounded-lg bg-primary-light px-3 text-xs font-semibold text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
+                          className="inline-flex h-8 items-center justify-center gap-1.5 rounded-lg border border-primary/15 bg-primary-light px-3 text-xs font-semibold text-primary transition hover:border-primary/30 hover:bg-primary hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
                         >
                           View details
+                          <ArrowUpRight className="size-3.5" aria-hidden="true" />
                         </button>
                       </td>
                     </tr>
@@ -460,7 +493,7 @@ export function OperationsSupportTicketsPage() {
             </table>
           </div>
 
-          <div className="flex flex-col gap-2 border-t border-border-subtle px-3 py-2.5 text-[11px] text-muted sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="flex flex-col gap-2 border-t border-border-subtle bg-hero-bg/30 px-4 py-3 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:px-5">
             <span>
               {total.toLocaleString("en-IN")} ticket{total === 1 ? "" : "s"}
             </span>
@@ -469,7 +502,7 @@ export function OperationsSupportTicketsPage() {
                 type="button"
                 disabled={page <= 1 || loading}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                className="inline-flex h-8 items-center rounded-lg border border-border-subtle px-3 font-semibold text-foreground transition hover:bg-hero-bg disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center rounded-lg border border-border-subtle bg-surface px-3 font-semibold text-foreground transition hover:border-primary/25 hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Previous
               </button>
@@ -480,13 +513,13 @@ export function OperationsSupportTicketsPage() {
                 type="button"
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((current) => current + 1)}
-                className="inline-flex h-8 items-center rounded-lg border border-border-subtle px-3 font-semibold text-foreground transition hover:bg-hero-bg disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 items-center rounded-lg border border-border-subtle bg-surface px-3 font-semibold text-foreground transition hover:border-primary/25 hover:bg-primary-light disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Next
               </button>
             </div>
           </div>
-        </OperationsCard>
+        </section>
 
         {detailError && !selected ? (
           <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs text-danger">

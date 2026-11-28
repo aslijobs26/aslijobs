@@ -38,6 +38,21 @@ blogPublicRouter.get(
   validate(slugParamsSchema, "params"),
   asyncHandler(blogController.related),
 );
+blogPublicRouter.post(
+  "/:slug/view",
+  validate(slugParamsSchema, "params"),
+  asyncHandler(blogController.recordPublicView),
+);
+blogPublicRouter.put(
+  "/:slug/like",
+  validate(slugParamsSchema, "params"),
+  asyncHandler(blogController.like),
+);
+blogPublicRouter.delete(
+  "/:slug/like",
+  validate(slugParamsSchema, "params"),
+  asyncHandler(blogController.unlike),
+);
 blogPublicRouter.get(
   "/:slug",
   validate(slugParamsSchema, "params"),

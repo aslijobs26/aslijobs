@@ -63,6 +63,8 @@ const blogSchema = new Schema(
       ogImage: { type: storedImageSchema, default: null },
     },
     readingTimeMinutes: { type: Number, default: 1, min: 1 },
+    views: { type: Number, default: 0, min: 0 },
+    likes: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
       enum: ["draft", "published", "scheduled"],
